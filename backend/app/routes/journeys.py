@@ -1,0 +1,204 @@
+from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel
+from typing import List, Dict, Optional, Any
+from datetime import datetime
+from app.auth import get_current_user
+from app.database import DBService
+from app.utils.routing import fetch_route, check_route_deviation, score_safety
+
+router = APIRouter(prefix="/journeys", tags=["Journeys"])
+
+class JourneyCreate(BaseModel):
+    cab_number: str
+    provider: str  # uber, ola, rapido, other
+    pickup_address: str
+    pickup_lat: float
+    pickup_lng: float
+    dest_address: str
+    dest_lat: float
+    dest_lng: float
+
+class TelemetryUpdate(BaseModel):
+    latitude: float
+    longitude: float
+    speed: float  # in m/s
+    timestamp: str
+    motion_anomaly: bool = False
+    audio_anomaly: bool = False
+    raw_audio_features: Optional[Dict[str, Any]] = None
+    speed_history: Optional[List[float]] = None
+
+@router.post("/start", response_model=Dict)
+async def start_journey(journey_in: JourneyCreate, current_user: Dict = Depends(get_current_user)):
+    user_phone = current_user["phone"]
+    
+    # Check if there is already an active journey
+    active = DBService.get_active_journey(user_phone)
+    if active:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="A journey is already active. Complete or cancel it first."
+        )
+
+    # Fetch expected route coordinates
+    expected_route = fetch_route(
+        journey_in.pickup_lat, journey_in.pickup_lng,
+        journey_in.dest_lat, journey_in.dest_lng
+    )
+
+    journey_data = journey_in.dict()
+    journey_data["expected_route"] = expected_route
+    
+    new_journey = DBService.create_journey(user_phone, journey_data)
+    
+    # Send Start Notification to Trusted Contacts (Simulated message)
+    contacts = DBService.get_contacts(user_phone)
+    for c in contacts:
+        msg = f"[FEMME Safeguard] {current_user.get('name', 'User')} has started a cab journey in {new_journey['provider'].upper()} (Plate: {new_journey['cab_number']}) from {new_journey['pickup_address']} to {new_journey['dest_address']}. Track live location here: http://femme-safety.app/track/{new_journey['id']}"
+        print(f"SIMULATED JOURNEY-START NOTIFICATION to {c['name']} ({c['phone']}): {msg}")
+
+    return new_journey
+
+@router.get("/active", response_model=Optional[Dict])
+async def get_active_journey(current_user: Dict = Depends(get_current_user)):
+    return DBService.get_active_journey(current_user["phone"])
+
+@router.post("/active/telemetry", response_model=Dict)
+async def update_telemetry(update: TelemetryUpdate, current_user: Dict = Depends(get_current_user)):
+    user_phone = current_user["phone"]
+    journey = DBService.get_active_journey(user_phone)
+    if not journey:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No active journey found."
+        )
+
+    # 1. Check Route Deviation
+    expected_route = journey.get("expected_route", [])
+    is_deviated, deviation_dist = check_route_deviation(update.latitude, update.longitude, expected_route)
+
+    # 2. Save Evidence Capsule snapshot
+    capsule_data = {
+        "journey_id": journey["id"],
+        "user_phone": user_phone,
+        "timestamp": update.timestamp,
+        "latitude": update.latitude,
+        "longitude": update.longitude,
+        "speed": update.speed,
+        "speed_history": update.speed_history or [],
+        "motion_anomaly": update.motion_anomaly,
+        "audio_anomaly": update.audio_anomaly,
+        "route_deviation": is_deviated,
+        "raw_audio_features": update.raw_audio_features or {},
+        "locked": 1 if journey["status"] == "emergency" else 0
+    }
+    
+    capsule = DBService.create_capsule(capsule_data)
+
+    # 3. Update Current Coordinates on Journey
+    updates = {
+        "current_lat": update.latitude,
+        "current_lng": update.longitude
+    }
+    DBService.update_journey(journey["id"], updates)
+
+    # Return assessment to frontend
+    return {
+        "journey_status": journey["status"],
+        "route_deviation": is_deviated,
+        "deviation_meters": deviation_dist,
+        "motion_anomaly": update.motion_anomaly,
+        "audio_anomaly": update.audio_anomaly,
+        "trigger_check": is_deviated or update.motion_anomaly or update.audio_anomaly,
+        "capsule_hash": capsule["integrity_hash"]
+    }
+
+@router.post("/active/complete", response_model=Dict)
+async def complete_journey(current_user: Dict = Depends(get_current_user)):
+    user_phone = current_user["phone"]
+    journey = DBService.get_active_journey(user_phone)
+    if not journey:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No active journey found."
+        )
+
+    updates = {
+        "status": "completed",
+        "end_time": datetime.utcnow().isoformat(),
+        "safe_arrival_notified": 1
+    }
+    updated_journey = DBService.update_journey(journey["id"], updates)
+
+    # Notify contacts of safe arrival
+    contacts = DBService.get_contacts(user_phone)
+    for c in contacts:
+        msg = f"[FEMME Safeguard] {current_user.get('name', 'User')} has arrived safely at {journey['dest_address']}. Monitoring completed."
+        print(f"SIMULATED SAFE-ARRIVAL NOTIFICATION to {c['name']} ({c['phone']}): {msg}")
+
+    return updated_journey
+
+@router.post("/active/cancel", response_model=Dict)
+async def cancel_journey(current_user: Dict = Depends(get_current_user)):
+    user_phone = current_user["phone"]
+    journey = DBService.get_active_journey(user_phone)
+    if not journey:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No active journey found."
+        )
+
+    updates = {
+        "status": "cancelled",
+        "end_time": datetime.utcnow().isoformat()
+    }
+    return DBService.update_journey(journey["id"], updates)
+
+@router.post("/active/sos", response_model=Dict)
+async def trigger_sos(current_user: Dict = Depends(get_current_user)):
+    user_phone = current_user["phone"]
+    journey = DBService.get_active_journey(user_phone)
+    
+    # If no active journey, create a quick ad-hoc journey to log evidence
+    if not journey:
+        # Quick fallback
+        journey = DBService.create_journey(user_phone, {
+            "cab_number": "EMERGENCY_SOS",
+            "provider": "adhoc",
+            "pickup_address": "SOS Trigger Location",
+            "pickup_lat": 12.9716, # default center if no coordinates
+            "pickup_lng": 77.5946,
+            "dest_address": "Emergency Station",
+            "dest_lat": 12.9716,
+            "dest_lng": 77.5946,
+            "expected_route": []
+        })
+
+    # Update state to emergency
+    updates = {"status": "emergency"}
+    updated_journey = DBService.update_journey(journey["id"], updates)
+    
+    # Lock all evidence capsules
+    DBService.lock_evidence(journey["id"])
+
+    # Notify emergency contacts immediately
+    contacts = DBService.get_contacts(user_phone)
+    for c in contacts:
+        msg = f"[FEMME EMERGENCY] SOS ALERT triggered by {current_user.get('name', 'User')}! Cab: {journey.get('cab_number')}. Track live coordinate: http://femme-safety.app/track/{journey['id']}"
+        print(f"!!! SIMULATED EMERGENCY SMS to {c['name']} ({c['phone']}): {msg} !!!")
+
+    return updated_journey
+
+@router.post("/score", response_model=Dict)
+async def check_route_safety(route_coords: List[List[float]], current_user: Dict = Depends(get_current_user)):
+    safe_zones = DBService.get_safe_zones()
+    unsafe_zones = DBService.get_unsafe_zones()
+    now_hour = datetime.now().hour
+    
+    # Convert route_coords back to list of tuples
+    path = [(pt[0], pt[1]) for pt in route_coords]
+    return score_safety(path, safe_zones, unsafe_zones, now_hour)
+
+@router.get("/history", response_model=List[Dict])
+async def get_history(current_user: Dict = Depends(get_current_user)):
+    return DBService.get_user_journeys(current_user["phone"])

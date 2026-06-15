@@ -1,0 +1,267 @@
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useStore } from '../store/useStore';
+import api from '../utils/api';
+import { MapContainer, TileLayer, Marker, Popup, Polyline, Circle, useMap } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+import { Navigation, ShieldAlert, Heart, Compass, ShieldCheck } from 'lucide-react';
+
+// Setup custom SVG icons to avoid Leaflet bundler image loading errors
+const createCustomIcon = (color: string, iconHtml: string) => {
+  return L.divIcon({
+    className: 'custom-leaflet-icon',
+    html: `
+      <div style="
+        background-color: ${color};
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        border: 2px solid white;
+      ">
+        ${iconHtml}
+      </div>
+    `,
+    iconSize: [32, 32],
+    iconAnchor: [16, 32],
+    popupAnchor: [0, -32]
+  });
+};
+
+const icons = {
+  traveler: L.divIcon({
+    className: 'traveler-marker',
+    html: `
+      <div class="relative flex items-center justify-center">
+        <div class="absolute w-8 h-8 rounded-full bg-rose-500/30 animate-ping"></div>
+        <div class="w-5 h-5 rounded-full bg-rose-500 border-2 border-white shadow-md"></div>
+      </div>
+    `,
+    iconSize: [20, 20],
+    iconAnchor: [10, 10]
+  }),
+  police: createCustomIcon('#10B981', '👮'), // green
+  hospital: createCustomIcon('#3B82F6', '🏥'), // blue
+  unsafe: createCustomIcon('#EF4444', '⚠️'), // red
+  pin: createCustomIcon('#8B5CF6', '📍')
+};
+
+// Component to dynamically pan and center map on updates
+const MapController: React.FC<{ center: [number, number] }> = ({ center }) => {
+  const map = useMap();
+  useEffect(() => {
+    if (center[0] && center[1]) {
+      map.setView(center, map.getZoom());
+    }
+  }, [center, map]);
+  return null;
+};
+
+export const RouteViewPage: React.FC = () => {
+  const navigate = useNavigate();
+  const { activeJourney, currentLat, currentLng, currentSpeed } = useStore();
+
+  const [safeZones, setSafeZones] = useState<any[]>([]);
+  const [unsafeZones, setUnsafeZones] = useState<any[]>([]);
+  const [safetyEvaluation, setSafetyEvaluation] = useState<any>({
+    score: 95,
+    status: 'green',
+    reason: 'Evaluating route conditions...'
+  });
+
+  // Default coordinate if no journey active (Bengaluru central)
+  const defaultCenter: [number, number] = [12.9716, 77.5946];
+  const mapCenter: [number, number] = activeJourney && currentLat && currentLng 
+    ? [currentLat, currentLng] 
+    : (activeJourney ? [activeJourney.pickup_lat, activeJourney.pickup_lng] : defaultCenter);
+
+  // Fetch Safe/Unsafe Zones
+  useEffect(() => {
+    const fetchZones = async () => {
+      try {
+        const sz = await api.getSafeZones();
+        setSafeZones(sz);
+        const uz = await api.getUnsafeZones();
+        setUnsafeZones(uz);
+      } catch (err) {
+        console.error("Failed to load map safety zones:", err);
+      }
+    };
+    fetchZones();
+  }, []);
+
+  // Compute safety scorer score based on path coordinates
+  useEffect(() => {
+    if (activeJourney && activeJourney.expected_route) {
+      const evaluate = async () => {
+        try {
+          const res = await api.evaluateRouteSafety(activeJourney.expected_route);
+          setSafetyEvaluation(res);
+        } catch (err) {
+          console.error("Route scorer fail:", err);
+        }
+      };
+      evaluate();
+    }
+  }, [activeJourney]);
+
+  return (
+    <div className="space-y-6 h-full flex flex-col">
+      
+      {/* Route Scorer Banner */}
+      {activeJourney && (
+        <div className={`p-4 border rounded-2xl flex items-start sm:items-center gap-3.5 shadow-md ${
+          safetyEvaluation.status === 'green' ? 'bg-emerald-950/20 border-emerald-500/25 glow-green' :
+          safetyEvaluation.status === 'amber' ? 'bg-amber-950/20 border-amber-500/25 glow-amber' :
+          'bg-rose-950/20 border-rose-500/25 glow-rose'
+        }`}>
+          <div className={`p-2.5 rounded-xl ${
+            safetyEvaluation.status === 'green' ? 'bg-emerald-500/10 text-emerald-400' :
+            safetyEvaluation.status === 'amber' ? 'bg-amber-500/10 text-amber-400' :
+            'bg-rose-500/10 text-rose-400'
+          }`}>
+            {safetyEvaluation.status === 'green' ? <ShieldCheck className="w-6 h-6" /> : <ShieldAlert className="w-6 h-6" />}
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold uppercase tracking-wider text-gray-400">Route Safety Score:</span>
+              <span className={`text-sm font-black ${
+                safetyEvaluation.status === 'green' ? 'text-emerald-400' :
+                safetyEvaluation.status === 'amber' ? 'text-amber-400' :
+                'text-rose-400'
+              }`}>{safetyEvaluation.score}/100</span>
+            </div>
+            <p className="text-xs text-gray-300 mt-1 leading-normal">{safetyEvaluation.reason}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Map Content Box */}
+      <div className="flex-1 min-h-[450px] relative rounded-2xl overflow-hidden border border-gray-800 shadow-xl bg-dark-900">
+        
+        <MapContainer 
+          center={mapCenter} 
+          zoom={14} 
+          scrollWheelZoom={true} 
+          style={{ width: '100%', height: '100%' }}
+        >
+          <TileLayer
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          />
+
+          {/* Render Expected Route Polyline */}
+          {activeJourney && activeJourney.expected_route && activeJourney.expected_route.length > 0 && (
+            <Polyline
+              positions={activeJourney.expected_route}
+              color={safetyEvaluation.status === 'green' ? '#10B981' : safetyEvaluation.status === 'amber' ? '#F59E0B' : '#EF4444'}
+              weight={5}
+              opacity={0.8}
+            />
+          )}
+
+          {/* Render Traveler location dot */}
+          {activeJourney && currentLat && currentLng && (
+            <Marker position={[currentLat, currentLng]} icon={icons.traveler}>
+              <Popup>
+                <div className="text-xs">
+                  <p className="font-bold text-gray-900">You are here</p>
+                  <p className="text-gray-500 font-mono">{(currentSpeed * 3.6).toFixed(1)} km/h</p>
+                </div>
+              </Popup>
+            </Marker>
+          )}
+
+          {/* Render Safe Zones (Police Stations, Hospitals etc) */}
+          {safeZones.map((sz, index) => (
+            <Marker 
+              key={`sz-${index}`} 
+              position={[sz.latitude, sz.longitude]}
+              icon={sz.type === 'police' ? icons.police : icons.hospital}
+            >
+              <Popup>
+                <div className="text-xs text-gray-900">
+                  <p className="font-bold">{sz.name}</p>
+                  <p className="text-[10px] text-gray-500 font-semibold uppercase">{sz.type} Station</p>
+                  <p className="mt-1 text-gray-600 font-light">{sz.description}</p>
+                </div>
+              </Popup>
+            </Marker>
+          ))}
+
+          {/* Render Unsafe Zones circles and markers */}
+          {unsafeZones.map((uz, index) => (
+            <React.Fragment key={`uz-${index}`}>
+              <Circle
+                center={[uz.latitude, uz.longitude]}
+                radius={uz.radius || 200}
+                pathOptions={{ color: '#EF4444', fillColor: '#EF4444', fillOpacity: 0.15, weight: 1 }}
+              />
+              <Marker 
+                position={[uz.latitude, uz.longitude]}
+                icon={icons.unsafe}
+              >
+                <Popup>
+                  <div className="text-xs text-gray-900">
+                    <p className="font-bold text-red-600">Risky / Unsafe Area</p>
+                    <p className="mt-1 font-light text-gray-700">{uz.description}</p>
+                    {uz.cab_plate && <p className="mt-1 text-[10px] font-mono text-gray-500">Cab reported: {uz.cab_plate}</p>}
+                  </div>
+                </Popup>
+              </Marker>
+            </React.Fragment>
+          ))}
+
+          {/* Render pickup and destination pins */}
+          {activeJourney && (
+            <>
+              <Marker position={[activeJourney.pickup_lat, activeJourney.pickup_lng]} icon={icons.pin}>
+                <Popup>
+                  <div className="text-xs text-gray-900">
+                    <p className="font-bold">Pickup Source</p>
+                    <p className="text-gray-500">{activeJourney.pickup_address}</p>
+                  </div>
+                </Popup>
+              </Marker>
+              <Marker position={[activeJourney.dest_lat, activeJourney.dest_lng]} icon={icons.pin}>
+                <Popup>
+                  <div className="text-xs text-gray-900">
+                    <p className="font-bold">Destination</p>
+                    <p className="text-gray-500">{activeJourney.dest_address}</p>
+                  </div>
+                </Popup>
+              </Marker>
+            </>
+          )}
+
+          {/* Adjust Center */}
+          <MapController center={mapCenter} />
+        </MapContainer>
+
+        {/* Floating Controls Overlay */}
+        {!activeJourney && (
+          <div className="absolute bottom-4 left-4 right-4 bg-dark-900/90 backdrop-blur-md border border-gray-800 p-4 rounded-xl z-[1000] flex flex-col sm:flex-row justify-between items-center gap-3">
+            <div className="flex items-center gap-2">
+              <Compass className="w-5 h-5 text-brand-500 animate-spin-slow" />
+              <div>
+                <p className="text-xs font-bold text-white">Safety Corridor Explorer</p>
+                <p className="text-[10px] text-gray-400">Centred on Bengaluru. Reviewing community safe/danger vectors.</p>
+              </div>
+            </div>
+            <button
+              onClick={() => navigate('/journey-setup')}
+              className="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-lg text-xs transition duration-150 shrink-0"
+            >
+              Start Journey Monitoring
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+export default RouteViewPage;
