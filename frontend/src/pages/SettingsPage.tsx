@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useStore } from '../store/useStore';
 import api from '../utils/api';
-import { Settings, Shield, Sliders, BellRing, CheckCircle2, ShieldAlert } from 'lucide-react';
+import { Settings, Shield, Sliders, BellRing, CheckCircle2, ShieldAlert, Globe } from 'lucide-react';
 
 export const SettingsPage: React.FC = () => {
   const { user, updateUserSettings } = useStore();
@@ -13,6 +13,7 @@ export const SettingsPage: React.FC = () => {
   const [sirenEnabled, setSirenEnabled] = useState(user?.settings?.siren_enabled !== false);
   const [shakeSensitivity, setShakeSensitivity] = useState(user?.settings?.shake_sensitivity || 12);
   const [autoDelete, setAutoDelete] = useState(true);
+  const [apiUrl, setApiUrl] = useState(() => localStorage.getItem('femme_api_url') || '');
 
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
@@ -25,6 +26,12 @@ export const SettingsPage: React.FC = () => {
     setLoading(true);
 
     try {
+      if (apiUrl.trim()) {
+        localStorage.setItem('femme_api_url', apiUrl.trim());
+      } else {
+        localStorage.removeItem('femme_api_url');
+      }
+
       const newSettings = {
         route_deviation_threshold: Number(routeDeviation),
         unusual_stop_threshold: Number(unusualStop),
@@ -146,6 +153,27 @@ export const SettingsPage: React.FC = () => {
               />
             </div>
             
+          </div>
+
+          {/* API Server Configuration */}
+          <div className="border-t border-gray-800 pt-6 space-y-4">
+            <h3 className="text-sm font-bold text-white flex items-center gap-2">
+              <Globe className="w-4 h-4 text-brand-500" />
+              API Server Configuration
+            </h3>
+            <div>
+              <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">Backend Server IP / Domain</label>
+              <input
+                type="text"
+                value={apiUrl}
+                onChange={(e) => setApiUrl(e.target.value)}
+                placeholder="E.g., http://192.168.1.100:8000 (Leave blank for local fallback)"
+                className="w-full bg-dark-950 border border-gray-800 focus:border-brand-500/40 rounded-xl py-3 px-4 text-white text-xs outline-none transition"
+              />
+              <p className="text-[10px] text-gray-500 mt-2 leading-relaxed">
+                Provide the host server endpoint. Under Android emulator, it falls back to <code className="text-brand-400">http://10.0.2.2:8000</code>. On real devices, specify your local host WiFi IP or cloud URL.
+              </p>
+            </div>
           </div>
         </div>
 

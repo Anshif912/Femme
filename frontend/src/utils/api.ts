@@ -1,6 +1,23 @@
 import { useStore } from '../store/useStore';
 
-const API_BASE = (import.meta.env.VITE_API_URL || `http://${window.location.hostname}:8000`) + '/api/v1';
+const getApiBase = () => {
+  const customUrl = localStorage.getItem('femme_api_url');
+  if (customUrl) {
+    const cleanUrl = customUrl.endsWith('/') ? customUrl.slice(0, -1) : customUrl;
+    return `${cleanUrl}/api/v1`;
+  }
+  if (import.meta.env.VITE_API_URL) {
+    const cleanUrl = import.meta.env.VITE_API_URL.endsWith('/') ? import.meta.env.VITE_API_URL.slice(0, -1) : import.meta.env.VITE_API_URL;
+    return `${cleanUrl}/api/v1`;
+  }
+  // Detect if running inside a mobile WebView context (Capacitor)
+  const isWebView = window.location.hostname === 'localhost' || window.location.protocol.startsWith('capacitor:');
+  if (isWebView) {
+    return 'http://10.0.2.2:8000/api/v1'; // Default Android emulator loopback
+  }
+  return `http://${window.location.hostname}:8000/api/v1`;
+};
+
 
 async function request(path: string, options: RequestInit = {}) {
   const token = useStore.getState().token;
@@ -13,7 +30,7 @@ async function request(path: string, options: RequestInit = {}) {
     headers.set('Content-Type', 'application/json');
   }
 
-  const response = await fetch(`${API_BASE}${path}`, {
+  const response = await fetch(`${getApiBase()}${path}`, {
     ...options,
     headers
   });
@@ -154,10 +171,9 @@ export const api = {
 
   // Simulator Websocket URL
   getWebSocketUrl: (journeyId: string) => {
-    const wsProto = window.location.protocol === 'https:' ? 'wss' : 'ws';
-    const host = import.meta.env.VITE_API_URL 
-      ? (import.meta.env.VITE_API_URL as string).replace(/^https?:\/\//, '')
-      : `${window.location.hostname}:8000`;
+    const apiBase = getApiBase();
+    const wsProto = apiBase.startsWith('https') ? 'wss' : 'ws';
+    const host = apiBase.replace(/^https?:\/\//, '').split('/api/v1')[0];
     return `${wsProto}://${host}/api/v1/ws/track/${journeyId}`;
   },
 
