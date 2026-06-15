@@ -52,11 +52,16 @@ export default function RootLayout() {
     if (!isHydrated) return;
 
     const inAuthGroup = segments[0] === '(auth)';
+    const inTabsGroup = segments[0] === '(tabs)';
 
-    if (!isAuthenticated && !inAuthGroup) {
-      router.replace('/(auth)/login');
-    } else if (isAuthenticated && inAuthGroup) {
-      router.replace('/(tabs)/dashboard');
+    if (!isAuthenticated) {
+      if (!inAuthGroup) {
+        router.replace('/(auth)/login');
+      }
+    } else {
+      if (!inTabsGroup && segments[0] !== 'journey' && segments[0] !== 'sos') {
+        router.replace('/(tabs)/dashboard');
+      }
     }
   }, [isAuthenticated, isHydrated, segments]);
 
