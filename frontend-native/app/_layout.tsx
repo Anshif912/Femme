@@ -34,11 +34,14 @@ export default function RootLayout() {
 
   // Monitor Zustand hydration from SecureStore
   useEffect(() => {
+    console.log('[FEMME DEBUG] app/_layout.tsx - Monitoring hydration');
     const unsubHydrate = useStore.persist.onFinishHydration(() => {
+      console.log('[FEMME DEBUG] app/_layout.tsx - Hydration Finished');
       setIsHydrated(true);
     });
 
     if (useStore.persist.hasHydrated()) {
+      console.log('[FEMME DEBUG] app/_layout.tsx - Already Hydrated');
       setIsHydrated(true);
     }
 
@@ -47,7 +50,11 @@ export default function RootLayout() {
     };
   }, []);
 
-  // Handle routing based on auth state
+  // Diagnostic Log on each render
+  console.log('[FEMME DEBUG] app/_layout.tsx - Rendering. isHydrated =', isHydrated, 'isAuthenticated =', isAuthenticated, 'segments =', segments);
+
+  // Handle routing based on auth state (TEMPORARILY BYPASSED FOR DIAGNOSTICS)
+  /*
   useEffect(() => {
     if (!isHydrated) return;
 
@@ -64,6 +71,7 @@ export default function RootLayout() {
       }
     }
   }, [isAuthenticated, isHydrated, segments]);
+  */
 
   // Global "60 Second No Response Rule" and Active Anomaly Timer Ticks
   useEffect(() => {
@@ -100,6 +108,8 @@ export default function RootLayout() {
     router.push('/sos/active');
   };
 
+  // (TEMPORARILY BYPASSED FOR DIAGNOSTICS)
+  /*
   if (!isHydrated) {
     return (
       <View style={styles.loadingContainer}>
@@ -107,6 +117,7 @@ export default function RootLayout() {
       </View>
     );
   }
+  */
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>

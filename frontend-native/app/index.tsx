@@ -1,19 +1,13 @@
 import React from 'react';
-import { ActivityIndicator, View, StyleSheet } from 'react-native';
+import { View, Text } from 'react-native';
 
 export default function Index() {
+  console.log('[FEMME DEBUG] app/index.tsx - Index Component Mounted');
   return (
-    <View style={styles.container}>
-      <ActivityIndicator size="large" color="#f43f5e" />
+    <View style={{ flex: 1, backgroundColor: 'blue', justifyContent: 'center', alignItems: 'center' }}>
+      <Text style={{ color: 'white', fontSize: 24, fontWeight: 'bold' }}>
+        INDEX IS RENDERING (BLUE SCREEN)
+      </Text>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#0f0f12',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-});
