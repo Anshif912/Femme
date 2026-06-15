@@ -15,10 +15,10 @@ export const SOSCenterPage: React.FC = () => {
   
   const [steps, setSteps] = useState({
     emergencyActivated: false,
-    contactsNotified: false,
+    smsSent: false,
+    callInitiated: false,
     liveTrackingActive: false,
     evidenceLocked: false,
-    firDraftReady: false,
     emergencyTimestamp: ''
   });
 
@@ -43,12 +43,12 @@ export const SOSCenterPage: React.FC = () => {
         setEmergencyState(true);
 
         setSteps({
-          emergencyActivated: true,
-          contactsNotified: true,
+          emergencyActivated: res.success ? true : false,
+          smsSent: res.sms_sent,
+          callInitiated: res.call_initiated,
           liveTrackingActive: true,
           evidenceLocked: true,
-          firDraftReady: true,
-          emergencyTimestamp: res.timestamp
+          emergencyTimestamp: new Date().toLocaleTimeString() + " UTC"
         });
       } catch (err) {
         console.error("SOS trigger fail:", err);
@@ -169,12 +169,21 @@ export const SOSCenterPage: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-2.5">
-            {steps.contactsNotified ? (
+            {steps.smsSent ? (
               <span className="text-emerald-400 font-bold">✓</span>
             ) : (
               <Loader2 className="w-3.5 h-3.5 text-red-500 animate-spin" />
             )}
-            <span className={steps.contactsNotified ? 'text-gray-300' : 'text-gray-500'}>Contacts Notified</span>
+            <span className={steps.smsSent ? 'text-gray-300' : 'text-gray-500'}>SMS Sent</span>
+          </div>
+
+          <div className="flex items-center gap-2.5">
+            {steps.callInitiated ? (
+              <span className="text-emerald-400 font-bold">✓</span>
+            ) : (
+              <Loader2 className="w-3.5 h-3.5 text-red-500 animate-spin" />
+            )}
+            <span className={steps.callInitiated ? 'text-gray-300' : 'text-gray-500'}>Call Initiated</span>
           </div>
 
           <div className="flex items-center gap-2.5">
@@ -192,16 +201,7 @@ export const SOSCenterPage: React.FC = () => {
             ) : (
               <Loader2 className="w-3.5 h-3.5 text-red-500 animate-spin" />
             )}
-            <span className={steps.evidenceLocked ? 'text-gray-300' : 'text-gray-500'}>Evidence Locked (Tamper-proof)</span>
-          </div>
-
-          <div className="flex items-center gap-2.5">
-            {steps.firDraftReady ? (
-              <span className="text-emerald-400 font-bold">✓</span>
-            ) : (
-              <Loader2 className="w-3.5 h-3.5 text-red-500 animate-spin" />
-            )}
-            <span className={steps.firDraftReady ? 'text-gray-300' : 'text-gray-500'}>FIR Draft Ready</span>
+            <span className={steps.evidenceLocked ? 'text-gray-300' : 'text-gray-500'}>Evidence Locked</span>
           </div>
         </div>
 
