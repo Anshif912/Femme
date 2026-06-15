@@ -61,10 +61,41 @@ async def verify_otp(payload: OTPVerifyRequest):
     phone = payload.phone.strip()
     otp = payload.otp.strip()
     
-    # Bypass logic for easy hackathon demo (e.g. 123456 or 999999 always matches)
     is_valid = False
-    if otp in ["123456", "999999", "000000"] or DBService.verify_otp(phone, otp):
-        is_valid = True
+    
+    # Check if this is a Firebase ID Token (Firebase ID tokens are JWTs, which are very long)
+    if len(otp) > 12:
+        if settings.USE_FIREBASE:
+            try:
+                from firebase_admin import auth as firebase_auth
+                decoded_token = firebase_auth.verify_id_token(otp)
+                token_phone = decoded_token.get("phone_number")
+                if not token_phone:
+                    raise HTTPException(status_code=400, detail="Phone number not found in Firebase token")
+                # Compare phone numbers (last 10 digits to ignore country code differences)
+                if token_phone.strip()[-10:] != phone.strip()[-10:]:
+                    raise HTTPException(status_code=400, detail="Phone number mismatch in Firebase token")
+                is_valid = True
+            except Exception as e:
+                raise HTTPException(status_code=400, detail=f"Firebase ID token verification failed: {e}")
+        else:
+            # Fallback when USE_FIREBASE is false: decode claims without signature verification
+            try:
+                from jose import jwt as jose_jwt
+                unverified_claims = jose_jwt.get_unverified_claims(otp)
+                token_phone = unverified_claims.get("phone_number")
+                if not token_phone:
+                    raise HTTPException(status_code=400, detail="Phone number not found in token claims")
+                if token_phone.strip()[-10:] != phone.strip()[-10:]:
+                    raise HTTPException(status_code=400, detail="Phone number mismatch in token claims")
+                is_valid = True
+                print(f"[AUTH] Unverified Firebase ID token accepted in SQLite fallback mode. Phone: {token_phone}")
+            except Exception as e:
+                raise HTTPException(status_code=400, detail=f"Failed to parse ID token: {e}")
+    else:
+        # Standard 6-digit OTP verification or bypass
+        if otp in ["123456", "999999", "000000"] or DBService.verify_otp(phone, otp):
+            is_valid = True
         
     if not is_valid:
         raise HTTPException(

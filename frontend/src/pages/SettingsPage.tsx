@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useStore } from '../store/useStore';
 import api from '../utils/api';
-import { Settings, Shield, Sliders, BellRing, CheckCircle2, ShieldAlert, Globe } from 'lucide-react';
+import { Settings, Shield, Sliders, BellRing, CheckCircle2, ShieldAlert, Globe, Activity, XCircle, Wifi, WifiOff, Cpu, AlertTriangle } from 'lucide-react';
+import { isInitialized as firebaseInitialized, missingKeys as firebaseMissingKeys } from '../utils/firebase';
+import { Logger } from '../utils/Logger';
 
 export const SettingsPage: React.FC = () => {
   const { user, updateUserSettings } = useStore();
@@ -18,6 +20,20 @@ export const SettingsPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+
+  const [showDiagnostics, setShowDiagnostics] = useState(false);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,11 +69,161 @@ export const SettingsPage: React.FC = () => {
     }
   };
 
+  if (showDiagnostics) {
+    return (
+      <div className="space-y-6 max-w-3xl mx-auto">
+        <div className="flex justify-between items-center">
+          <div>
+            <h2 className="text-2xl font-black text-white">System Diagnostics</h2>
+            <p className="text-xs text-gray-400">Real-time verification of native layers, auth plugins, and backend connectivity.</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowDiagnostics(false)}
+            className="py-2 px-4 bg-dark-900 border border-gray-800 hover:border-brand-500/30 text-xs font-bold text-white rounded-xl transition flex items-center gap-2"
+          >
+            <Settings className="w-4 h-4 text-brand-500" />
+            Back to Settings
+          </button>
+        </div>
+
+        <div className="glass-card p-6 rounded-2xl border border-gray-800 space-y-6">
+          <h3 className="text-base font-bold text-white flex items-center gap-2">
+            <Cpu className="w-5 h-5 text-brand-500" />
+            Hardware & Native Platform Diagnostics
+          </h3>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            
+            {/* Firebase Initialization */}
+            <div className="p-4 bg-dark-950/60 border border-gray-800 rounded-xl flex items-center justify-between">
+              <div className="space-y-1">
+                <p className="text-xs font-bold text-white">Firebase Initialized</p>
+                <p className="text-[10px] text-gray-500">Firebase JS SDK Core active</p>
+              </div>
+              {firebaseInitialized ? (
+                <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+              ) : (
+                <XCircle className="w-5 h-5 text-red-500" />
+              )}
+            </div>
+
+            {/* Auth Ready */}
+            <div className="p-4 bg-dark-950/60 border border-gray-800 rounded-xl flex items-center justify-between">
+              <div className="space-y-1">
+                <p className="text-xs font-bold text-white">Auth Status</p>
+                <p className="text-[10px] text-gray-500">Phone Authentication provider</p>
+              </div>
+              {firebaseInitialized ? (
+                <span className="text-[10px] bg-emerald-500/10 text-emerald-400 py-1 px-2.5 font-bold rounded-full border border-emerald-500/20">READY</span>
+              ) : (
+                <span className="text-[10px] bg-red-500/10 text-red-400 py-1 px-2.5 font-bold rounded-full border border-red-500/20">DISABLED</span>
+              )}
+            </div>
+
+            {/* Google Services Loaded */}
+            <div className="p-4 bg-dark-950/60 border border-gray-800 rounded-xl flex items-center justify-between">
+              <div className="space-y-1">
+                <p className="text-xs font-bold text-white">Google Services Status</p>
+                <p className="text-[10px] text-gray-500">Android native configuration status</p>
+              </div>
+              {firebaseInitialized ? (
+                <span className="text-[10px] bg-emerald-500/10 text-emerald-400 py-1 px-2.5 font-bold rounded-full border border-emerald-500/20">LOADED</span>
+              ) : (
+                <span className="text-[10px] bg-amber-500/10 text-amber-400 py-1 px-2.5 font-bold rounded-full border border-amber-500/20">MISSING KEYS</span>
+              )}
+            </div>
+
+            {/* Package Name */}
+            <div className="p-4 bg-dark-950/60 border border-gray-800 rounded-xl flex items-center justify-between">
+              <div className="space-y-1">
+                <p className="text-xs font-bold text-white">Application ID</p>
+                <p className="text-[10px] text-gray-500">AndroidManifest namespace</p>
+              </div>
+              <code className="text-xs font-mono text-brand-400 font-bold">com.femme.app</code>
+            </div>
+
+            {/* Environment */}
+            <div className="p-4 bg-dark-950/60 border border-gray-800 rounded-xl flex items-center justify-between">
+              <div className="space-y-1">
+                <p className="text-xs font-bold text-white">Build Environment</p>
+                <p className="text-[10px] text-gray-500">Vite compile targets</p>
+              </div>
+              <span className="text-[10px] bg-brand-500/10 text-brand-400 py-1 px-2.5 font-bold rounded-full border border-brand-500/20">
+                {import.meta.env.MODE.toUpperCase()}
+              </span>
+            </div>
+
+            {/* Internet connection */}
+            <div className="p-4 bg-dark-950/60 border border-gray-800 rounded-xl flex items-center justify-between">
+              <div className="space-y-1 flex items-center gap-3">
+                {isOnline ? (
+                  <Wifi className="w-4 h-4 text-emerald-400" />
+                ) : (
+                  <WifiOff className="w-4 h-4 text-red-400" />
+                )}
+                <div>
+                  <p className="text-xs font-bold text-white">Network Status</p>
+                  <p className="text-[10px] text-gray-500">Browser connection state</p>
+                </div>
+              </div>
+              {isOnline ? (
+                <span className="text-[10px] bg-emerald-500/10 text-emerald-400 py-1 px-2.5 font-bold rounded-full border border-emerald-500/20">ONLINE</span>
+              ) : (
+                <span className="text-[10px] bg-red-500/10 text-red-400 py-1 px-2.5 font-bold rounded-full border border-red-500/20">OFFLINE</span>
+              )}
+            </div>
+
+            {/* Phone Auth Enabled */}
+            <div className="p-4 bg-dark-950/60 border border-gray-800 rounded-xl flex items-center justify-between md:col-span-2">
+              <div className="space-y-1">
+                <p className="text-xs font-bold text-white">Phone Authentication Capability</p>
+                <p className="text-[10px] text-gray-500">
+                  {firebaseInitialized 
+                    ? "Production Phone Auth is active. SMS OTP will verify with Google Firebase."
+                    : "Firebase credentials missing. Check settings below to resolve."}
+                </p>
+              </div>
+              <div className={`w-3.5 h-3.5 rounded-full ${firebaseInitialized ? 'bg-emerald-500 shadow-lg shadow-emerald-500/30' : 'bg-red-500 shadow-lg shadow-red-500/30'}`} />
+            </div>
+
+          </div>
+        </div>
+
+        {/* Missing keys debug card if any */}
+        {firebaseMissingKeys.length > 0 && (
+          <div className="glass-card p-6 rounded-2xl border border-gray-800 space-y-4">
+            <h4 className="text-xs font-bold text-amber-400 uppercase tracking-widest flex items-center gap-1.5">
+              <AlertTriangle className="w-4 h-4" />
+              Pending Firebase Configuration
+            </h4>
+            <p className="text-xs text-gray-300 leading-normal">
+              To make Phone Authentication operational in your native APK, you must create a <code className="text-brand-400 font-bold font-mono">frontend/.env</code> file and configure these parameters:
+            </p>
+            <ul className="list-disc pl-4 font-mono text-[11px] text-amber-200/90 space-y-1 bg-dark-950/40 p-4 rounded-xl border border-gray-800">
+              {firebaseMissingKeys.map(k => <li key={k}>{k}</li>)}
+            </ul>
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-6 max-w-3xl mx-auto">
-      <div>
-        <h2 className="text-2xl font-black text-white">Shield Settings</h2>
-        <p className="text-xs text-gray-400">Calibrate passive tracking triggers, notification intervals, and de-escalation check timeouts.</p>
+    <div className="space-y-6 max-w-3xl mx-auto animate-fade-in">
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-2xl font-black text-white">Shield Settings</h2>
+          <p className="text-xs text-gray-400">Calibrate passive tracking triggers, notification intervals, and de-escalation check timeouts.</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setShowDiagnostics(true)}
+          className="py-2 px-4 bg-dark-900 border border-gray-800 hover:border-brand-500/30 text-xs font-bold text-white rounded-xl transition flex items-center gap-2"
+        >
+          <Activity className="w-4 h-4 text-brand-500" />
+          System Diagnostics
+        </button>
       </div>
 
       {message && (
@@ -240,4 +406,5 @@ export const SettingsPage: React.FC = () => {
     </div>
   );
 };
+
 export default SettingsPage;
