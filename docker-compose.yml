@@ -9,8 +9,15 @@ services:
       - "8000:8000"
     environment:
       - DATABASE_URL=sqlite:///./femme_local.db
-      - USE_FIREBASE=false
-      - SMS_PROVIDER=simulated
+      - USE_FIREBASE=true
+      - FIREBASE_CREDENTIALS_PATH=serviceAccountKey.json
+      - SECRET_KEY=${SECRET_KEY}
+      - JWT_SECRET=${JWT_SECRET}
+      - OPENROUTE_SERVICE_KEY=${OPENROUTE_SERVICE_KEY}
+      - SMS_PROVIDER=twilio
+      - TWILIO_ACCOUNT_SID=${TWILIO_ACCOUNT_SID}
+      - TWILIO_AUTH_TOKEN=${TWILIO_AUTH_TOKEN}
+      - TWILIO_PHONE_NUMBER=+919345383129
     volumes:
       - ./backend:/app
       - backend_data:/app/data

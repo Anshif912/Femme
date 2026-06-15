@@ -97,11 +97,7 @@ export const AuthPage: React.FC = () => {
               </div>
             </div>
 
-            <div className="p-3.5 bg-brand-500/5 border border-brand-500/10 rounded-xl">
-              <p className="text-xs text-brand-400 leading-normal font-semibold">
-                🛡️ Firebase OTP verification fallback. Enter any number. The terminal logs will print the OTP.
-              </p>
-            </div>
+
 
             <button
               type="submit"
@@ -116,7 +112,7 @@ export const AuthPage: React.FC = () => {
           <form onSubmit={handleVerifyOtp} className="space-y-5">
             <div className="p-3 bg-emerald-950/15 border border-emerald-500/20 text-emerald-400 text-xs rounded-lg flex items-start gap-2 mb-2">
               <CheckCircle2 className="w-4.5 h-4.5 shrink-0 text-emerald-400" />
-              <span>{otpMessage || 'SMS code has been simulated to your number. Check server terminal logs!'}</span>
+              <span>{otpMessage || 'We have sent a verification code to your registered mobile number.'}</span>
             </div>
 
             <div>
@@ -146,11 +142,7 @@ export const AuthPage: React.FC = () => {
               </div>
             </div>
 
-            <div className="p-3 bg-dark-900 border border-gray-800 rounded-xl text-center">
-              <p className="text-[11px] text-gray-400">
-                💡 Hackathon Fast Bypass OTPs: <code className="text-brand-400 font-bold font-mono">123456</code>, <code className="text-brand-400 font-bold font-mono">999999</code> or <code className="text-brand-400 font-bold font-mono">000000</code>.
-              </p>
-            </div>
+
 
             <button
               type="submit"
