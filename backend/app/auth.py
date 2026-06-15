@@ -15,7 +15,16 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
         expire = datetime.utcnow() + expires_delta
     else:
         expire = datetime.utcnow() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-    to_encode.update({"exp": expire})
+    
+    phone = data.get("sub", "")
+    user_id = data.get("user_id", "")
+    
+    to_encode.update({
+        "exp": expire,
+        "sub": phone,
+        "phone": phone,
+        "user_id": user_id
+    })
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
     return encoded_jwt
 
@@ -67,3 +76,30 @@ def send_sms_otp(phone: str, otp: str) -> bool:
     print(f"SIMULATED SMS OTP to {phone}: {message_text}")
     print("==================================================")
     return True
+
+def send_twilio_verify_otp(phone: str) -> bool:
+    if settings.SMS_PROVIDER == "twilio" and settings.TWILIO_ACCOUNT_SID and settings.TWILIO_VERIFY_SERVICE_SID:
+        try:
+            from twilio.rest import Client
+            client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
+            client.verify.v2.services(settings.TWILIO_VERIFY_SERVICE_SID) \
+                .verifications \
+                .create(to=phone, channel='sms')
+            print(f"[TWILIO VERIFY] Dispatched SMS verification to {phone}")
+            return True
+        except Exception as e:
+            print(f"[TWILIO VERIFY] Failed to send via Twilio API: {e}. Falling back to simulation.")
+    return False
+
+def check_twilio_verify_otp(phone: str, code: str) -> bool:
+    if settings.SMS_PROVIDER == "twilio" and settings.TWILIO_ACCOUNT_SID and settings.TWILIO_VERIFY_SERVICE_SID:
+        try:
+            from twilio.rest import Client
+            client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
+            check = client.verify.v2.services(settings.TWILIO_VERIFY_SERVICE_SID) \
+                .verification_checks \
+                .create(to=phone, code=code)
+            return check.status == "approved"
+        except Exception as e:
+            print(f"[TWILIO VERIFY] Verification failed: {e}. Checking local database.")
+    return False

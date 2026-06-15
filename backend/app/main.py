@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 
 from app.config import settings
 from app.database import init_sqlite_db, DBService
-from app.auth import get_current_user, create_access_token, generate_otp, send_sms_otp
+from app.auth import get_current_user, create_access_token, generate_otp, send_sms_otp, send_twilio_verify_otp, check_twilio_verify_otp
 from app.routes import journeys, contacts, evidence, reports, simulation
 
 # Initialize local SQLite DB tables
@@ -35,83 +35,85 @@ class PhoneAuthRequest(BaseModel):
 
 class OTPVerifyRequest(BaseModel):
     phone: str
-    otp: str
+    otp: Optional[str] = None
+    code: Optional[str] = None
     name: Optional[str] = None
 
 # JWT & OTP Authentication Routes
-@app.post(f"{settings.API_V1_STR}/auth/request-otp", response_model=Dict)
-async def request_otp(payload: PhoneAuthRequest):
+@app.post(f"{settings.API_V1_STR}/auth/send-otp", response_model=Dict)
+async def send_otp(payload: PhoneAuthRequest):
     phone = payload.phone.strip()
     if not phone:
         raise HTTPException(status_code=400, detail="Phone number is required")
         
+    print(f"[OTP] Sending OTP request to: {phone}")
+    sent_via_twilio = send_twilio_verify_otp(phone)
+    
+    # Generate local DB OTP anyway for simulation/fallback compatibility
     otp = generate_otp()
     expires_at = datetime.utcnow() + timedelta(minutes=10)
-    
     DBService.create_otp(phone, otp, expires_at)
-    send_sms_otp(phone, otp)
     
+    if not sent_via_twilio:
+        # Fallback to simulated terminal SMS
+        send_sms_otp(phone, otp)
+        msg = f"OTP code {otp} sent successfully to {phone} (Simulated in terminal)."
+    else:
+        msg = "OTP successfully dispatched via Twilio Verify API."
+        
     return {
+        "success": True,
         "status": "success",
-        "message": f"Verification code sent successfully to {phone} (Simulated in terminal)."
+        "message": msg
     }
+
+@app.post(f"{settings.API_V1_STR}/auth/request-otp", response_model=Dict)
+async def request_otp(payload: PhoneAuthRequest):
+    # Alias mapping for backwards compatibility
+    return await send_otp(payload)
 
 @app.post(f"{settings.API_V1_STR}/auth/verify-otp", response_model=Dict)
 async def verify_otp(payload: OTPVerifyRequest):
     phone = payload.phone.strip()
-    otp = payload.otp.strip()
     
+    # Support both code and otp parameters from request payload
+    verify_code = payload.code.strip() if payload.code else (payload.otp.strip() if payload.otp else "")
+    
+    if not verify_code:
+        raise HTTPException(status_code=400, detail="OTP/Verification code is required")
+        
     is_valid = False
     
-    # Check if this is a Firebase ID Token (Firebase ID tokens are JWTs, which are very long)
-    if len(otp) > 12:
-        if settings.USE_FIREBASE:
-            try:
-                from firebase_admin import auth as firebase_auth
-                decoded_token = firebase_auth.verify_id_token(otp)
-                token_phone = decoded_token.get("phone_number")
-                if not token_phone:
-                    raise HTTPException(status_code=400, detail="Phone number not found in Firebase token")
-                # Compare phone numbers (last 10 digits to ignore country code differences)
-                if token_phone.strip()[-10:] != phone.strip()[-10:]:
-                    raise HTTPException(status_code=400, detail="Phone number mismatch in Firebase token")
-                is_valid = True
-            except Exception as e:
-                raise HTTPException(status_code=400, detail=f"Firebase ID token verification failed: {e}")
-        else:
-            # Fallback when USE_FIREBASE is false: decode claims without signature verification
-            try:
-                from jose import jwt as jose_jwt
-                unverified_claims = jose_jwt.get_unverified_claims(otp)
-                token_phone = unverified_claims.get("phone_number")
-                if not token_phone:
-                    raise HTTPException(status_code=400, detail="Phone number not found in token claims")
-                if token_phone.strip()[-10:] != phone.strip()[-10:]:
-                    raise HTTPException(status_code=400, detail="Phone number mismatch in token claims")
-                is_valid = True
-                print(f"[AUTH] Unverified Firebase ID token accepted in SQLite fallback mode. Phone: {token_phone}")
-            except Exception as e:
-                raise HTTPException(status_code=400, detail=f"Failed to parse ID token: {e}")
-    else:
-        # Standard 6-digit OTP verification or bypass
-        if otp in ["123456", "999999", "000000"] or DBService.verify_otp(phone, otp):
-            is_valid = True
+    print(f"[OTP] Verifying code {verify_code} for phone {phone}")
+    
+    # 1. Try checking with Twilio Verify first
+    if check_twilio_verify_otp(phone, verify_code):
+        is_valid = True
+    # 2. Bypass rules for easy hackathon demo (e.g. 123456 or 999999) or local database check
+    elif verify_code in ["123456", "999999", "000000"] or DBService.verify_otp(phone, verify_code):
+        is_valid = True
         
     if not is_valid:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid or expired OTP verification code."
-        )
+        return {
+            "success": False,
+            "message": "Invalid OTP"
+        }
         
     # Check if user exists, else create
     user = DBService.get_user(phone)
     if not user:
         user = DBService.create_user(phone, name=payload.name or "Femme Traveler")
         
-    # Generate access token
-    access_token = create_access_token(data={"sub": phone})
+    # Generate access token containing user_id and phone in its payload
+    access_token = create_access_token(data={
+        "sub": phone,
+        "user_id": user.get("id", ""),
+        "phone": phone
+    })
     
     return {
+        "success": True,
+        "token": access_token,
         "access_token": access_token,
         "token_type": "bearer",
         "user": user
@@ -166,58 +168,67 @@ async def sos_trigger(current_user: Dict = Depends(get_current_user)):
     # 8. Generate tracking link
     tracking_link = f"http://femme-safety.app/track/{journey['id']}"
 
-    # 7. Send emergency alerts (formatted text output)
+    # 7. Send emergency alerts (formatted text output matching user's template exactly)
     timestamp_str = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")
+    origin = journey.get("pickup_address", "Unknown Origin")
+    destination = journey.get("dest_address", "Unknown Destination")
+    cab_number = journey.get("cab_number", "Unknown Cab")
+    user_name = current_user.get("name", "User")
+    
     alert_message = (
-        f"🚨 FEMME EMERGENCY ALERT\n"
-        f"User: {current_user.get('name', 'User')}\n"
-        f"Cab Number: {journey.get('cab_number')}\n"
-        f"Provider: {journey.get('provider').upper()}\n"
-        f"Location: {lat:.5f}, {lng:.5f}\n"
-        f"Time: {timestamp_str}\n"
-        f"Tracking Link:\n{tracking_link}"
+        f"🚨 FEMME EMERGENCY ALERT\n\n"
+        f"User: {user_name}\n\n"
+        f"Live Location:\n"
+        f"https://maps.google.com/?q={lat},{lng}\n\n"
+        f"Cab Number:\n"
+        f"{cab_number}\n\n"
+        f"Route:\n"
+        f"{origin} → {destination}\n\n"
+        f"Time:\n"
+        f"{timestamp_str}\n\n"
+        f"Please contact immediately."
     )
 
     sms_sent = False
     call_initiated = False
     whatsapp_sent = False
 
-    # Send multi-channel alerts to emergency contacts
+    # Send multi-channel alerts to emergency contacts (Voice calls are processed sequentially)
     for c in contacts:
         if settings.SMS_PROVIDER == "twilio" and settings.TWILIO_ACCOUNT_SID:
             try:
                 from twilio.rest import Client
                 client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
                 
-                # 1. SMS Dispatch
+                # 1. SMS Dispatch (no confirmation wait)
                 client.messages.create(
                     body=alert_message,
-                    from_=settings.TWILIO_PHONE_NUMBER,
+                    from_=settings.TWILIO_FROM_NUMBER,
                     to=c["phone"]
                 )
                 sms_sent = True
                 print(f"[SOS] Sent real Twilio SMS alert to {c['name']} ({c['phone']})")
                 
-                # 2. Voice Call Dispatch with direct inline TwiML
+                # 2. Voice Call Dispatch with custom message sequentially
                 twiml_content = (
                     "<Response>"
-                    "<Say voice='alice'>FEMME emergency alert. Your trusted contact has activated SOS. "
-                    "Check the tracking link sent to your phone.</Say>"
+                    "<Say voice='alice'>Emergency alert from FEMME. The user may be in danger. "
+                    "Please check the SMS location link immediately.</Say>"
                     "</Response>"
                 )
                 client.calls.create(
                     to=c["phone"],
-                    from_=settings.TWILIO_PHONE_NUMBER,
+                    from_=settings.TWILIO_FROM_NUMBER,
                     twiml=twiml_content
                 )
                 call_initiated = True
                 print(f"[SOS] Initiated automated Twilio Voice Call to {c['name']} ({c['phone']})")
 
-                # 3. WhatsApp Dispatch (using Sandbox sandbox numbers)
+                # 3. WhatsApp Dispatch (using Sandbox numbers)
                 try:
                     client.messages.create(
                         body=alert_message,
-                        from_=f"whatsapp:{settings.TWILIO_PHONE_NUMBER}",
+                        from_=f"whatsapp:{settings.TWILIO_FROM_NUMBER}",
                         to=f"whatsapp:{c['phone']}"
                     )
                     whatsapp_sent = True
@@ -227,7 +238,6 @@ async def sos_trigger(current_user: Dict = Depends(get_current_user)):
 
             except Exception as e:
                 print(f"[SOS] Twilio dispatch to {c['phone']} failed: {e}. Falling back to simulation.")
-                # Fallback to simulation mode if keys are invalid/rate limited
                 sms_sent = True
                 call_initiated = True
                 whatsapp_sent = True

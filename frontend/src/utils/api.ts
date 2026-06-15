@@ -56,10 +56,10 @@ async function request(path: string, options: RequestInit = {}) {
 export const api = {
   // Auth
   requestOtp: (phone: string) => 
-    request('/auth/request-otp', { method: 'POST', body: JSON.stringify({ phone }) }),
+    request('/auth/send-otp', { method: 'POST', body: JSON.stringify({ phone }) }),
     
-  verifyOtp: (phone: string, otp: string, name?: string) => 
-    request('/auth/verify-otp', { method: 'POST', body: JSON.stringify({ phone, otp, name }) }),
+  verifyOtp: (phone: string, code: string, name?: string) => 
+    request('/auth/verify-otp', { method: 'POST', body: JSON.stringify({ phone, code, name }) }),
     
   getMe: () => 
     request('/auth/me'),

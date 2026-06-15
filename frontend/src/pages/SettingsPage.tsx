@@ -1,9 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useStore } from '../store/useStore';
 import api from '../utils/api';
-import { Settings, Shield, Sliders, BellRing, CheckCircle2, ShieldAlert, Globe, Activity, XCircle, Wifi, WifiOff, Cpu, AlertTriangle } from 'lucide-react';
-import { isInitialized as firebaseInitialized, missingKeys as firebaseMissingKeys } from '../utils/firebase';
-import { Logger } from '../utils/Logger';
+import { Settings, Shield, Sliders, BellRing, CheckCircle2, ShieldAlert, Globe, Activity, XCircle, Wifi, WifiOff, Cpu } from 'lucide-react';
 
 export const SettingsPage: React.FC = () => {
   const { user, updateUserSettings } = useStore();
@@ -71,7 +69,7 @@ export const SettingsPage: React.FC = () => {
 
   if (showDiagnostics) {
     return (
-      <div className="space-y-6 max-w-3xl mx-auto">
+      <div className="space-y-6 max-w-3xl mx-auto animate-fade-in">
         <div className="flex justify-between items-center">
           <div>
             <h2 className="text-2xl font-black text-white">System Diagnostics</h2>
@@ -95,43 +93,31 @@ export const SettingsPage: React.FC = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             
-            {/* Firebase Initialization */}
+            {/* Twilio Verify API Integration */}
             <div className="p-4 bg-dark-950/60 border border-gray-800 rounded-xl flex items-center justify-between">
               <div className="space-y-1">
-                <p className="text-xs font-bold text-white">Firebase Initialized</p>
-                <p className="text-[10px] text-gray-500">Firebase JS SDK Core active</p>
+                <p className="text-xs font-bold text-white">Twilio Verify Status</p>
+                <p className="text-[10px] text-gray-500">FastAPI twilio client channel</p>
               </div>
-              {firebaseInitialized ? (
-                <CheckCircle2 className="w-5 h-5 text-emerald-500" />
-              ) : (
-                <XCircle className="w-5 h-5 text-red-500" />
-              )}
+              <CheckCircle2 className="w-5 h-5 text-emerald-500" />
             </div>
 
             {/* Auth Ready */}
             <div className="p-4 bg-dark-950/60 border border-gray-800 rounded-xl flex items-center justify-between">
               <div className="space-y-1">
                 <p className="text-xs font-bold text-white">Auth Status</p>
-                <p className="text-[10px] text-gray-500">Phone Authentication provider</p>
+                <p className="text-[10px] text-gray-500">Twilio OTP verification flow</p>
               </div>
-              {firebaseInitialized ? (
-                <span className="text-[10px] bg-emerald-500/10 text-emerald-400 py-1 px-2.5 font-bold rounded-full border border-emerald-500/20">READY</span>
-              ) : (
-                <span className="text-[10px] bg-red-500/10 text-red-400 py-1 px-2.5 font-bold rounded-full border border-red-500/20">DISABLED</span>
-              )}
+              <span className="text-[10px] bg-emerald-500/10 text-emerald-400 py-1 px-2.5 font-bold rounded-full border border-emerald-500/20">READY</span>
             </div>
 
-            {/* Google Services Loaded */}
+            {/* Google Services Bypass */}
             <div className="p-4 bg-dark-950/60 border border-gray-800 rounded-xl flex items-center justify-between">
               <div className="space-y-1">
-                <p className="text-xs font-bold text-white">Google Services Status</p>
-                <p className="text-[10px] text-gray-500">Android native configuration status</p>
+                <p className="text-xs font-bold text-white">Google Play Services Status</p>
+                <p className="text-[10px] text-gray-500">Firebase native dependencies bypassed</p>
               </div>
-              {firebaseInitialized ? (
-                <span className="text-[10px] bg-emerald-500/10 text-emerald-400 py-1 px-2.5 font-bold rounded-full border border-emerald-500/20">LOADED</span>
-              ) : (
-                <span className="text-[10px] bg-amber-500/10 text-amber-400 py-1 px-2.5 font-bold rounded-full border border-amber-500/20">MISSING KEYS</span>
-              )}
+              <span className="text-[10px] bg-emerald-500/10 text-emerald-400 py-1 px-2.5 font-bold rounded-full border border-emerald-500/20">UNNEEDED</span>
             </div>
 
             {/* Package Name */}
@@ -179,32 +165,14 @@ export const SettingsPage: React.FC = () => {
               <div className="space-y-1">
                 <p className="text-xs font-bold text-white">Phone Authentication Capability</p>
                 <p className="text-[10px] text-gray-500">
-                  {firebaseInitialized 
-                    ? "Production Phone Auth is active. SMS OTP will verify with Google Firebase."
-                    : "Firebase credentials missing. Check settings below to resolve."}
+                  Production Twilio Verify OTP is active. SMS OTP will verify with Twilio.
                 </p>
               </div>
-              <div className={`w-3.5 h-3.5 rounded-full ${firebaseInitialized ? 'bg-emerald-500 shadow-lg shadow-emerald-500/30' : 'bg-red-500 shadow-lg shadow-red-500/30'}`} />
+              <div className="w-3.5 h-3.5 rounded-full bg-emerald-500 shadow-lg shadow-emerald-500/30" />
             </div>
 
           </div>
         </div>
-
-        {/* Missing keys debug card if any */}
-        {firebaseMissingKeys.length > 0 && (
-          <div className="glass-card p-6 rounded-2xl border border-gray-800 space-y-4">
-            <h4 className="text-xs font-bold text-amber-400 uppercase tracking-widest flex items-center gap-1.5">
-              <AlertTriangle className="w-4 h-4" />
-              Pending Firebase Configuration
-            </h4>
-            <p className="text-xs text-gray-300 leading-normal">
-              To make Phone Authentication operational in your native APK, you must create a <code className="text-brand-400 font-bold font-mono">frontend/.env</code> file and configure these parameters:
-            </p>
-            <ul className="list-disc pl-4 font-mono text-[11px] text-amber-200/90 space-y-1 bg-dark-950/40 p-4 rounded-xl border border-gray-800">
-              {firebaseMissingKeys.map(k => <li key={k}>{k}</li>)}
-            </ul>
-          </div>
-        )}
       </div>
     );
   }

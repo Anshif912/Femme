@@ -26,6 +26,9 @@ class Settings(BaseSettings):
     TWILIO_ACCOUNT_SID: str = os.getenv("TWILIO_ACCOUNT_SID", "")
     TWILIO_AUTH_TOKEN: str = os.getenv("TWILIO_AUTH_TOKEN", "")
     TWILIO_PHONE_NUMBER: str = os.getenv("TWILIO_PHONE_NUMBER", "")
+    TWILIO_VERIFY_SERVICE_SID: str = os.getenv("TWILIO_VERIFY_SERVICE_SID", "")
+    TWILIO_FROM_NUMBER: str = os.getenv("TWILIO_FROM_NUMBER", os.getenv("TWILIO_PHONE_NUMBER", ""))
+    JWT_SECRET: str = os.getenv("JWT_SECRET", "dev_fallback_secret_key_change_me_in_production")
 
     # Anomaly settings (Thresholds)
     ROUTE_DEVIATION_THRESHOLD_METERS: float = 150.0  # 150m deviation triggers check
@@ -37,3 +40,17 @@ class Settings(BaseSettings):
         case_sensitive = True
 
 settings = Settings()
+
+# Startup validation for Twilio Verify variables
+if settings.SMS_PROVIDER == "twilio":
+    missing_vars = []
+    if not settings.TWILIO_ACCOUNT_SID:
+        missing_vars.append("TWILIO_ACCOUNT_SID")
+    if not settings.TWILIO_AUTH_TOKEN:
+        missing_vars.append("TWILIO_AUTH_TOKEN")
+    if not settings.TWILIO_VERIFY_SERVICE_SID:
+        missing_vars.append("TWILIO_VERIFY_SERVICE_SID")
+    if missing_vars:
+        print("==================================================")
+        print(f"⚠️ STARTUP WARNING: Twilio configuration missing: {', '.join(missing_vars)}")
+        print("==================================================")
