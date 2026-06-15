@@ -4,7 +4,7 @@ from typing import List, Dict, Optional, Any
 from datetime import datetime
 from app.auth import get_current_user
 from app.database import DBService
-from app.utils.routing import fetch_route, check_route_deviation, score_safety
+from app.utils.routing import fetch_route, check_route_deviation, score_safety, geocode_address
 
 router = APIRouter(prefix="/journeys", tags=["Journeys"])
 
@@ -12,11 +12,11 @@ class JourneyCreate(BaseModel):
     cab_number: str
     provider: str  # uber, ola, rapido, other
     pickup_address: str
-    pickup_lat: float
-    pickup_lng: float
+    pickup_lat: Optional[float] = None
+    pickup_lng: Optional[float] = None
     dest_address: str
-    dest_lat: float
-    dest_lng: float
+    dest_lat: Optional[float] = None
+    dest_lng: Optional[float] = None
 
 class TelemetryUpdate(BaseModel):
     latitude: float
@@ -32,6 +32,17 @@ class TelemetryUpdate(BaseModel):
 async def start_journey(journey_in: JourneyCreate, current_user: Dict = Depends(get_current_user)):
     user_phone = current_user["phone"]
     
+    # Resolve geocoding coordinates internally
+    p_lat = journey_in.pickup_lat
+    p_lng = journey_in.pickup_lng
+    if p_lat is None or p_lng is None:
+        p_lat, p_lng = geocode_address(journey_in.pickup_address)
+
+    d_lat = journey_in.dest_lat
+    d_lng = journey_in.dest_lng
+    if d_lat is None or d_lng is None:
+        d_lat, d_lng = geocode_address(journey_in.dest_address)
+
     # Check if there is already an active journey
     active = DBService.get_active_journey(user_phone)
     if active:
@@ -41,12 +52,13 @@ async def start_journey(journey_in: JourneyCreate, current_user: Dict = Depends(
         )
 
     # Fetch expected route coordinates
-    expected_route = fetch_route(
-        journey_in.pickup_lat, journey_in.pickup_lng,
-        journey_in.dest_lat, journey_in.dest_lng
-    )
+    expected_route = fetch_route(p_lat, p_lng, d_lat, d_lng)
 
     journey_data = journey_in.dict()
+    journey_data["pickup_lat"] = p_lat
+    journey_data["pickup_lng"] = p_lng
+    journey_data["dest_lat"] = d_lat
+    journey_data["dest_lng"] = d_lng
     journey_data["expected_route"] = expected_route
     
     new_journey = DBService.create_journey(user_phone, journey_data)

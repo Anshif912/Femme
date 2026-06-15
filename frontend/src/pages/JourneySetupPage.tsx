@@ -61,12 +61,53 @@ export const JourneySetupPage: React.FC = () => {
     setDestLng(preset.dest_lng);
   };
 
+  const handleSimulateCabBooking = async () => {
+    setError('');
+    setLoading(true);
+    
+    const randomDigits = Math.floor(1000 + Math.random() * 9000);
+    const mockCab = `KA03MM${randomDigits}`;
+    
+    const providers = ['uber', 'ola', 'rapido'];
+    const mockProvider = providers[Math.floor(Math.random() * providers.length)];
+    
+    const preset = SIM_PRESETS[Math.floor(Math.random() * SIM_PRESETS.length)];
+    
+    setCabNumber(mockCab);
+    setProvider(mockProvider);
+    setPickupAddress(preset.pickup_address);
+    setPickupLat(preset.pickup_lat);
+    setPickupLng(preset.pickup_lng);
+    setDestAddress(preset.dest_address);
+    setDestLat(preset.dest_lat);
+    setDestLng(preset.dest_lng);
+
+    try {
+      const res = await api.startJourney({
+        cab_number: mockCab,
+        provider: mockProvider,
+        pickup_address: preset.pickup_address,
+        pickup_lat: preset.pickup_lat,
+        pickup_lng: preset.pickup_lng,
+        dest_address: preset.dest_address,
+        dest_lat: preset.dest_lat,
+        dest_lng: preset.dest_lng
+      });
+      
+      setActiveJourney(res);
+      navigate('/route-view');
+    } catch (err: any) {
+      setError(err.message || 'Failed to simulate cab booking.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleStart = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
-    if (!cabNumber || !provider || !pickupAddress || !destAddress || 
-        pickupLat === '' || pickupLng === '' || destLat === '' || destLng === '') {
+    if (!cabNumber || !provider || !pickupAddress || !destAddress) {
       setError('Please complete all form fields or select a simulated route preset.');
       return;
     }
@@ -78,11 +119,11 @@ export const JourneySetupPage: React.FC = () => {
         cab_number: formattedCab,
         provider,
         pickup_address: pickupAddress,
-        pickup_lat: Number(pickupLat),
-        pickup_lng: Number(pickupLng),
+        pickup_lat: pickupLat !== '' ? Number(pickupLat) : undefined,
+        pickup_lng: pickupLng !== '' ? Number(pickupLng) : undefined,
         dest_address: destAddress,
-        dest_lat: Number(destLat),
-        dest_lng: Number(destLng)
+        dest_lat: destLat !== '' ? Number(destLat) : undefined,
+        dest_lng: destLng !== '' ? Number(destLng) : undefined
       });
       
       setActiveJourney(res);
@@ -117,6 +158,16 @@ export const JourneySetupPage: React.FC = () => {
           <span>{error}</span>
         </div>
       )}
+
+      <button
+        type="button"
+        onClick={handleSimulateCabBooking}
+        disabled={loading}
+        className="w-full py-4 bg-gradient-to-r from-brand-600 to-brand-400 hover:from-brand-700 hover:to-brand-500 text-white font-extrabold rounded-2xl shadow-lg shadow-brand-500/10 transition flex items-center justify-center gap-2 group text-sm"
+      >
+        <Compass className="w-5 h-5 text-white animate-pulse" />
+        Simulate Cab Booking (Auto-Start Guardian Mode)
+      </button>
 
       {/* Preset Route Selectors */}
       <div className="glass-card p-5 rounded-2xl border border-gray-800 space-y-3">
@@ -173,86 +224,30 @@ export const JourneySetupPage: React.FC = () => {
         </div>
 
         <div className="border-t border-gray-800 pt-4 space-y-4">
-          <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Coordinates & Addresses</h4>
+          <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Commute Details</h4>
           
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="sm:col-span-2">
-              <label className="block text-[9px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Pickup Address</label>
-              <input
-                type="text"
-                placeholder="E.g., Koramangala 4th Block"
-                value={pickupAddress}
-                onChange={(e) => setPickupAddress(e.target.value)}
-                className="w-full bg-dark-950 border border-gray-800 focus:border-brand-500/40 rounded-xl py-2.5 px-4 text-white text-xs outline-none transition"
-                required
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className="block text-[9px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Pickup Lat</label>
-                <input
-                  type="number"
-                  step="any"
-                  placeholder="12.9352"
-                  value={pickupLat}
-                  onChange={(e) => setPickupLat(e.target.value === '' ? '' : Number(e.target.value))}
-                  className="w-full bg-dark-950 border border-gray-800 focus:border-brand-500/40 rounded-xl py-2.5 px-2 text-white text-xs outline-none text-center transition"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-[9px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Pickup Lng</label>
-                <input
-                  type="number"
-                  step="any"
-                  placeholder="77.6245"
-                  value={pickupLng}
-                  onChange={(e) => setPickupLng(e.target.value === '' ? '' : Number(e.target.value))}
-                  className="w-full bg-dark-950 border border-gray-800 focus:border-brand-500/40 rounded-xl py-2.5 px-2 text-white text-xs outline-none text-center transition"
-                  required
-                />
-              </div>
-            </div>
+          <div>
+            <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Pickup Location Address</label>
+            <input
+              type="text"
+              placeholder="E.g., Koramangala 4th Block, Bengaluru"
+              value={pickupAddress}
+              onChange={(e) => setPickupAddress(e.target.value)}
+              className="w-full bg-dark-950 border border-gray-800 focus:border-brand-500/40 rounded-xl py-3 px-4 text-white text-xs outline-none transition"
+              required
+            />
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="sm:col-span-2">
-              <label className="block text-[9px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Destination Address</label>
-              <input
-                type="text"
-                placeholder="E.g., Indiranagar Double Road"
-                value={destAddress}
-                onChange={(e) => setDestAddress(e.target.value)}
-                className="w-full bg-dark-950 border border-gray-800 focus:border-brand-500/40 rounded-xl py-2.5 px-4 text-white text-xs outline-none transition"
-                required
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className="block text-[9px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Dest Lat</label>
-                <input
-                  type="number"
-                  step="any"
-                  placeholder="12.9719"
-                  value={destLat}
-                  onChange={(e) => setDestLat(e.target.value === '' ? '' : Number(e.target.value))}
-                  className="w-full bg-dark-950 border border-gray-800 focus:border-brand-500/40 rounded-xl py-2.5 px-2 text-white text-xs outline-none text-center transition"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-[9px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Dest Lng</label>
-                <input
-                  type="number"
-                  step="any"
-                  placeholder="77.6412"
-                  value={destLng}
-                  onChange={(e) => setDestLng(e.target.value === '' ? '' : Number(e.target.value))}
-                  className="w-full bg-dark-950 border border-gray-800 focus:border-brand-500/40 rounded-xl py-2.5 px-2 text-white text-xs outline-none text-center transition"
-                  required
-                />
-              </div>
-            </div>
+          <div>
+            <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Destination Address</label>
+            <input
+              type="text"
+              placeholder="E.g., Indiranagar Double Road, Bengaluru"
+              value={destAddress}
+              onChange={(e) => setDestAddress(e.target.value)}
+              className="w-full bg-dark-950 border border-gray-800 focus:border-brand-500/40 rounded-xl py-3 px-4 text-white text-xs outline-none transition"
+              required
+            />
           </div>
         </div>
 

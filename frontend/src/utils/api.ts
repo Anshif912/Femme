@@ -58,11 +58,11 @@ export const api = {
     cab_number: string;
     provider: string;
     pickup_address: string;
-    pickup_lat: number;
-    pickup_lng: number;
+    pickup_lat?: number;
+    pickup_lng?: number;
     dest_address: string;
-    dest_lat: number;
-    dest_lng: number;
+    dest_lat?: number;
+    dest_lng?: number;
   }) => request('/journeys/start', { method: 'POST', body: JSON.stringify(journey) }),
   
   getActiveJourney: () => 
@@ -86,7 +86,7 @@ export const api = {
     request('/journeys/active/cancel', { method: 'POST' }),
     
   triggerSos: () => 
-    request('/journeys/active/sos', { method: 'POST' }),
+    request('/sos/trigger', { method: 'POST' }),
     
   getHistory: () => 
     request('/journeys/history'),

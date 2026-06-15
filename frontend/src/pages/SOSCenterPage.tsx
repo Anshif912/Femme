@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
 import api from '../utils/api';
-import { ShieldAlert, Volume2, VolumeX, Eye, Phone, MapPin, CheckCircle2 } from 'lucide-react';
+import { ShieldAlert, Volume2, VolumeX, Eye, Phone, MapPin, CheckCircle2, ShieldCheck, Loader2 } from 'lucide-react';
 
 export const SOSCenterPage: React.FC = () => {
   const navigate = useNavigate();
@@ -11,22 +11,52 @@ export const SOSCenterPage: React.FC = () => {
   const [sirenPlaying, setSirenPlaying] = useState(true);
   const [blinkingState, setBlinkingState] = useState(false);
   const [contacts, setContacts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  
+  const [steps, setSteps] = useState({
+    emergencyActivated: false,
+    contactsNotified: false,
+    liveTrackingActive: false,
+    evidenceLocked: false,
+    firDraftReady: false,
+    emergencyTimestamp: ''
+  });
 
   const audioCtxRef = useRef<AudioContext | null>(null);
   const oscillatorRef = useRef<OscillatorNode | null>(null);
   const gainRef = useRef<GainNode | null>(null);
 
-  // Fetch emergency contacts
+  // Auto trigger SOS on page enter (One-tap action completed!)
   useEffect(() => {
-    const getEmergencyInfo = async () => {
+    const triggerEmergencyProtocol = async () => {
+      setLoading(true);
       try {
+        const res = await api.triggerSos();
+        
+        // Load data
         const cont = await api.getContacts();
         setContacts(cont);
+        const active = await api.getActiveJourney();
+        if (active) {
+          setActiveJourney(active);
+        }
+        setEmergencyState(true);
+
+        setSteps({
+          emergencyActivated: true,
+          contactsNotified: true,
+          liveTrackingActive: true,
+          evidenceLocked: true,
+          firDraftReady: true,
+          emergencyTimestamp: res.timestamp
+        });
       } catch (err) {
-        console.error(err);
+        console.error("SOS trigger fail:", err);
+      } finally {
+        setLoading(false);
       }
     };
-    getEmergencyInfo();
+    triggerEmergencyProtocol();
   }, []);
 
   // Web Audio Programmatic Siren Synthesizer (No static file dependencies!)
@@ -120,6 +150,67 @@ export const SOSCenterPage: React.FC = () => {
         <p className="text-xs text-red-400 mt-2 font-semibold tracking-widest uppercase">
           Live GPS stream dispatched to priority guardians
         </p>
+      </div>
+
+      {/* Emergency Progress Checklist */}
+      <div className="glass-card p-5 max-w-sm w-full rounded-2xl border border-red-500/20 text-left space-y-3">
+        <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest border-b border-gray-800 pb-2 mb-2">
+          Emergency Checklist Actions
+        </h4>
+        
+        <div className="space-y-2.5 text-xs font-semibold">
+          <div className="flex items-center gap-2.5">
+            {steps.emergencyActivated ? (
+              <span className="text-emerald-400 font-bold">✓</span>
+            ) : (
+              <Loader2 className="w-3.5 h-3.5 text-red-500 animate-spin" />
+            )}
+            <span className={steps.emergencyActivated ? 'text-gray-300' : 'text-gray-500'}>Emergency Activated</span>
+          </div>
+
+          <div className="flex items-center gap-2.5">
+            {steps.contactsNotified ? (
+              <span className="text-emerald-400 font-bold">✓</span>
+            ) : (
+              <Loader2 className="w-3.5 h-3.5 text-red-500 animate-spin" />
+            )}
+            <span className={steps.contactsNotified ? 'text-gray-300' : 'text-gray-500'}>Contacts Notified</span>
+          </div>
+
+          <div className="flex items-center gap-2.5">
+            {steps.liveTrackingActive ? (
+              <span className="text-emerald-400 font-bold">✓</span>
+            ) : (
+              <Loader2 className="w-3.5 h-3.5 text-red-500 animate-spin" />
+            )}
+            <span className={steps.liveTrackingActive ? 'text-gray-300' : 'text-gray-500'}>Live Tracking Active</span>
+          </div>
+
+          <div className="flex items-center gap-2.5">
+            {steps.evidenceLocked ? (
+              <span className="text-emerald-400 font-bold">✓</span>
+            ) : (
+              <Loader2 className="w-3.5 h-3.5 text-red-500 animate-spin" />
+            )}
+            <span className={steps.evidenceLocked ? 'text-gray-300' : 'text-gray-500'}>Evidence Locked (Tamper-proof)</span>
+          </div>
+
+          <div className="flex items-center gap-2.5">
+            {steps.firDraftReady ? (
+              <span className="text-emerald-400 font-bold">✓</span>
+            ) : (
+              <Loader2 className="w-3.5 h-3.5 text-red-500 animate-spin" />
+            )}
+            <span className={steps.firDraftReady ? 'text-gray-300' : 'text-gray-500'}>FIR Draft Ready</span>
+          </div>
+        </div>
+
+        {steps.emergencyTimestamp && (
+          <div className="border-t border-gray-800 pt-2 mt-2 flex justify-between items-center text-[10px] text-gray-500 font-mono">
+            <span>EMERGENCY TIMESTAMP:</span>
+            <span>{steps.emergencyTimestamp}</span>
+          </div>
+        )}
       </div>
 
       {/* Audio Siren Toggles */}

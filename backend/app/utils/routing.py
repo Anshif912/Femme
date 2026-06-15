@@ -1,7 +1,53 @@
 import math
 import requests
-from typing import List, Tuple, Dict
+from typing import List, Tuple, Dict,Any
 from app.config import settings
+
+def geocode_address(address: str) -> Tuple[float, float]:
+    """
+    Geocodes an address string to (latitude, longitude) using local presets
+    or OpenStreetMap Nominatim API.
+    """
+    clean = address.lower().strip()
+    
+    # 1. Local preset dictionary for instant demo geocoding
+    presets = {
+        "koramangala": (12.9352, 77.6245),
+        "indiranagar": (12.9719, 77.6412),
+        "hsr layout": (12.9141, 77.6411),
+        "bellandur": (12.9304, 77.6784),
+        "hal museum": (12.9562, 77.6698),
+        "majestic": (12.9779, 77.5707),
+        "whitefield": (12.9698, 77.7499)
+      }
+      
+    for key, coords in presets.items():
+        if key in clean:
+            print(f"[GEOCODE] Resolved preset: '{key}' -> {coords}")
+            return coords
+
+    # 2. OpenStreetMap Nominatim API Geocode
+    url = f"https://nominatim.openstreetmap.org/search?format=json&q={address}&limit=1"
+    headers = {
+        "User-Agent": "FEMME-Safeguard-Platform-Demo/1.0 (Safety Commute App)"
+    }
+    
+    try:
+        response = requests.get(url, headers=headers, timeout=6)
+        if response.status_code == 200:
+            data = response.json()
+            if data and len(data) > 0:
+                lat = float(data[0]["lat"])
+                lng = float(data[0]["lon"])
+                print(f"[GEOCODE] Resolved API: '{address}' -> ({lat}, {lng})")
+                return lat, lng
+    except Exception as e:
+        print(f"[GEOCODE] Nominatim API request failed: {e}. Falling back to default center.")
+
+    # 3. Default Fallback center (Bengaluru)
+    fallback = (12.9716, 77.5946)
+    print(f"[GEOCODE] Fallback coordinate applied for '{address}' -> {fallback}")
+    return fallback
 
 def haversine_distance(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
     """
