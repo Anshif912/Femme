@@ -147,12 +147,25 @@ async def sos_trigger(current_user: Dict = Depends(get_current_user)):
         f"Tracking Link:\n{tracking_link}"
     )
 
-    # Simulated SMS delivery logs
+    # Send SMS alert to priority emergency contacts
     for c in contacts:
-        print("==================================================")
-        print(f"🚨 ALERT DISPATCHED TO {c['name']} ({c['phone']}):")
-        print(alert_message)
-        print("==================================================")
+        if settings.SMS_PROVIDER == "twilio" and settings.TWILIO_ACCOUNT_SID:
+            try:
+                from twilio.rest import Client
+                client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
+                client.messages.create(
+                    body=alert_message,
+                    from_=settings.TWILIO_PHONE_NUMBER,
+                    to=c["phone"]
+                )
+                print(f"[SOS] Sent real Twilio SMS alert to {c['name']} ({c['phone']})")
+            except Exception as e:
+                print(f"[SOS] Twilio SMS dispatch to {c['phone']} failed: {e}. Falling back to simulation.")
+        else:
+            print("==================================================")
+            print(f"🚨 [SIMULATED SMS] ALERT DISPATCHED TO {c['name']} ({c['phone']}):")
+            print(alert_message)
+            print("==================================================")
 
     # 9. Create FIR draft entry (pre-compiles ReportLab PDF template)
     try:
