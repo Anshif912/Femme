@@ -1,0 +1,39 @@
+{
+  "expo": {
+    "name": "FEMME",
+    "slug": "femme-native",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.femme.app"
+    },
+    "android": {
+      "package": "com.femme.app",
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
+        "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_LOCATION",
+        "RECORD_AUDIO",
+        "POST_NOTIFICATIONS",
+        "WAKE_LOCK"
+      ]
+    },
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationAlwaysPermission": "Allow FEMME to access your location in the background to monitor your commute for route deviation.",
+          "isAndroidBackgroundLocationEnabled": true
+        }
+      ]
+    ],
+    "scheme": "femme",
+    "web": {
+      "bundler": "metro"
+    }
+  }
+}
