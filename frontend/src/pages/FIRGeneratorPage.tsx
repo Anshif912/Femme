@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import api from '../utils/api';
-import { FileText, ArrowRight, ShieldCheck, Download, AlertTriangle, Info } from 'lucide-react';
+import { FileText, ArrowRight, ShieldCheck, Download, AlertTriangle, Info, Fingerprint } from 'lucide-react';
 
 export const FIRGeneratorPage: React.FC = () => {
   const navigate = useNavigate();
@@ -18,6 +18,29 @@ export const FIRGeneratorPage: React.FC = () => {
 
   const [loading, setLoading] = useState(false);
   const [selectedJourney, setSelectedJourney] = useState<any | null>(null);
+  const [capsules, setCapsules] = useState<any[]>([]);
+  const [loadingCapsules, setLoadingCapsules] = useState(false);
+
+  // Fetch capsules when selected journey changes
+  useEffect(() => {
+    if (selectedJourneyId) {
+      const fetchCapsules = async () => {
+        setLoadingCapsules(true);
+        try {
+          const data = await api.getCapsules(selectedJourneyId);
+          setCapsules(data);
+        } catch (err) {
+          console.error("Failed to fetch capsules for journey:", err);
+          setCapsules([]);
+        } finally {
+          setLoadingCapsules(false);
+        }
+      };
+      fetchCapsules();
+    } else {
+      setCapsules([]);
+    }
+  }, [selectedJourneyId]);
 
   useEffect(() => {
     const fetchHistory = async () => {
@@ -190,6 +213,70 @@ export const FIRGeneratorPage: React.FC = () => {
         </div>
 
       </div>
+
+      {/* Chronological Capsule Integrity Log Timeline */}
+      {selectedJourneyId && (
+        <div className="glass-card p-6 rounded-2xl border border-gray-800 space-y-4">
+          <div className="flex justify-between items-center border-b border-gray-800 pb-3">
+            <div>
+              <span className="text-xs font-bold text-brand-400 tracking-widest uppercase mb-0.5 block">Chronological Capsule Integrity Log</span>
+              <h3 className="text-base font-bold text-white">Immutable Evidence Snapshots ({capsules.length})</h3>
+            </div>
+            <span className="text-[10px] px-2.5 py-1 bg-dark-950 border border-gray-800 text-gray-400 font-bold rounded-lg flex items-center gap-1.5 font-mono">
+              <Fingerprint className="w-3.5 h-3.5 text-brand-500" />
+              SHA-256 SIGNED
+            </span>
+          </div>
+
+          {loadingCapsules ? (
+            <div className="py-12 text-center text-xs text-gray-500">
+              Loading sealed evidence capsules from vault...
+            </div>
+          ) : capsules.length > 0 ? (
+            <div className="space-y-3 max-h-[350px] overflow-y-auto pr-1">
+              {capsules.map((capsule, index) => (
+                <div key={capsule.id || index} className="p-4 bg-dark-950/40 border border-gray-800/60 rounded-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4 text-xs">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="w-5 h-5 rounded-full bg-brand-500/10 border border-brand-500/20 text-brand-400 flex items-center justify-center font-bold text-[10px]">
+                        #{index + 1}
+                      </span>
+                      <span className="font-bold text-white font-mono">
+                        {new Date(capsule.timestamp).toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="flex gap-4 text-[10px] text-gray-400 font-medium">
+                      <span>Coordinates: <code className="text-gray-300 font-mono">{capsule.latitude.toFixed(5)}, {capsule.longitude.toFixed(5)}</code></span>
+                      <span>Speed: <code className="text-gray-300">{(capsule.speed * 3.6).toFixed(1)} km/h</code></span>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap md:flex-nowrap items-center gap-3 w-full md:w-auto md:justify-end">
+                    <div className="flex flex-wrap gap-1">
+                      {capsule.route_deviation === 1 && <span className="px-1.5 py-0.5 bg-red-950/40 text-red-400 rounded text-[9px] font-bold border border-red-500/10">ROUTE DEVIATION</span>}
+                      {capsule.motion_anomaly === 1 && <span className="px-1.5 py-0.5 bg-yellow-950/40 text-yellow-400 rounded text-[9px] font-bold border border-yellow-500/10">UNUSUAL STOP</span>}
+                      {capsule.audio_anomaly === 1 && <span className="px-1.5 py-0.5 bg-orange-950/40 text-orange-400 rounded text-[9px] font-bold border border-orange-500/10">VOICE DISTRESS</span>}
+                      {capsule.route_deviation !== 1 && capsule.motion_anomaly !== 1 && capsule.audio_anomaly !== 1 && (
+                        <span className="px-1.5 py-0.5 bg-emerald-950/30 text-emerald-400 rounded text-[9px] font-bold border border-emerald-500/10">SECURE STATE</span>
+                      )}
+                    </div>
+                    
+                    <div className="text-right font-mono text-[10px] w-full md:w-auto">
+                      <span className="text-gray-500 block md:inline mr-1">SHA-256:</span>
+                      <span className="text-brand-400 font-semibold">{capsule.integrity_hash}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="py-12 text-center text-xs text-gray-500 font-light">
+              No evidence capsules compiled for this journey.
+            </div>
+          )}
+        </div>
+      )}
+
     </div>
   );
 };
