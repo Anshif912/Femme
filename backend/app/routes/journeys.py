@@ -193,6 +193,24 @@ async def trigger_sos(current_user: Dict = Depends(get_current_user)):
     # Lock all evidence capsules
     DBService.lock_evidence(journey["id"])
 
+    # Create immediate emergency evidence capsule
+    lat = journey.get("current_lat") or journey.get("pickup_lat") or 12.9716
+    lng = journey.get("current_lng") or journey.get("pickup_lng") or 77.5946
+    DBService.create_capsule({
+        "journey_id": journey["id"],
+        "user_phone": user_phone,
+        "timestamp": datetime.utcnow().isoformat(),
+        "latitude": lat,
+        "longitude": lng,
+        "speed": 0.0,
+        "speed_history": [],
+        "motion_anomaly": True,
+        "audio_anomaly": True,
+        "route_deviation": True,
+        "raw_audio_features": {"sos_trigger": True},
+        "locked": 1
+    })
+
     # Notify emergency contacts immediately
     contacts = DBService.get_contacts(user_phone)
     for c in contacts:

@@ -32,6 +32,7 @@ async def download_fir_report(journey_id: str, current_user: Dict = Depends(get_
 
     # Get evidence capsules
     capsules = DBService.get_capsules(journey_id)
+    contacts = DBService.get_contacts(journey["user_phone"])
     
     # Generate temporary PDF filename
     pdf_filename = f"FIR_Report_{journey_id}.pdf"
@@ -43,7 +44,7 @@ async def download_fir_report(journey_id: str, current_user: Dict = Depends(get_
     
     # Generate the PDF
     try:
-        generate_fir_pdf(journey, capsules, pdf_path)
+        generate_fir_pdf(journey, capsules, contacts, pdf_path)
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

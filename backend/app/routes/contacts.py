@@ -23,3 +23,7 @@ async def add_contact(contact_in: ContactCreate, current_user: Dict = Depends(ge
 async def delete_contact(contact_id: str, current_user: Dict = Depends(get_current_user)):
     DBService.delete_contact(current_user["phone"], contact_id)
     return {"status": "success", "message": "Contact removed successfully"}
+
+@router.put("/{contact_id}", response_model=Dict)
+async def update_contact(contact_id: str, contact_in: ContactCreate, current_user: Dict = Depends(get_current_user)):
+    return DBService.update_contact(current_user["phone"], contact_id, contact_in.dict())

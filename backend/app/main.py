@@ -163,6 +163,22 @@ async def sos_trigger(current_user: Dict = Depends(get_current_user)):
     updated_journey = DBService.update_journey(journey["id"], updates)
     DBService.lock_evidence(journey["id"])
 
+    # Create immediate emergency evidence capsule
+    DBService.create_capsule({
+        "journey_id": journey["id"],
+        "user_phone": user_phone,
+        "timestamp": datetime.utcnow().isoformat(),
+        "latitude": lat,
+        "longitude": lng,
+        "speed": 0.0,
+        "speed_history": [],
+        "motion_anomaly": True,
+        "audio_anomaly": True,
+        "route_deviation": True,
+        "raw_audio_features": {"sos_trigger": True},
+        "locked": 1
+    })
+
     # 6. Start emergency tracking (handled via ws channel logic and emergency state updates)
     
     # 8. Generate tracking link
@@ -262,7 +278,7 @@ async def sos_trigger(current_user: Dict = Depends(get_current_user)):
         pdf_path = os.path.join(pdf_dir, pdf_filename)
         
         capsules = DBService.get_capsules(journey["id"])
-        generate_fir_pdf(updated_journey, capsules, pdf_path)
+        generate_fir_pdf(updated_journey, capsules, contacts, pdf_path)
     except Exception as e:
         print(f"FIR Draft compilation failed: {e}")
 

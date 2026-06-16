@@ -48,7 +48,7 @@ class NumberedCanvas(canvas.Canvas):
         
         self.restoreState()
 
-def generate_fir_pdf(journey: Dict, capsules: List[Dict], output_path: str):
+def generate_fir_pdf(journey: Dict, capsules: List[Dict], contacts: List[Dict], output_path: str):
     # Setup document
     doc = SimpleDocTemplate(
         output_path,
@@ -142,6 +142,37 @@ def generate_fir_pdf(journey: Dict, capsules: List[Dict], output_path: str):
         ('BACKGROUND', (2,0), (2,-1), colors.HexColor("#F7FAFC")),
     ]))
     story.append(meta_table)
+    story.append(Spacer(1, 15))
+
+    # Notified Emergency Guardians Table
+    story.append(Paragraph("Notified Emergency Guardians", h1_style))
+    contacts_data = [[
+        Paragraph("Name", bold_label_style),
+        Paragraph("Phone Number", bold_label_style),
+        Paragraph("Alert Priority", bold_label_style)
+    ]]
+    for c in contacts:
+        contacts_data.append([
+            Paragraph(c.get("name", "N/A"), body_style),
+            Paragraph(c.get("phone", "N/A"), body_style),
+            Paragraph(f"Priority P{c.get('priority', 1)}", body_style)
+        ])
+    if len(contacts) == 0:
+        contacts_data.append([
+            Paragraph("N/A", body_style),
+            Paragraph("No trusted contacts configured. Automatic secondary dispatch systems active.", body_style),
+            Paragraph("N/A", body_style)
+        ])
+    contacts_table = Table(contacts_data, colWidths=[2.5*inch, 2.5*inch, 2.0*inch])
+    contacts_table.setStyle(TableStyle([
+        ('ALIGN', (0,0), (-1,-1), 'LEFT'),
+        ('VALIGN', (0,0), (-1,-1), 'TOP'),
+        ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor("#E2E8F0")),
+        ('TOPPADDING', (0,0), (-1,-1), 6),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 6),
+        ('BACKGROUND', (0,0), (-1,0), colors.HexColor("#F7FAFC")),
+    ]))
+    story.append(contacts_table)
     story.append(Spacer(1, 15))
 
     # Safety Incident / Anomalies Log

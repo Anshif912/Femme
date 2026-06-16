@@ -32,12 +32,64 @@ export default function ActiveJourneyScreen() {
     setActiveJourney,
     resetTelemetryState,
     setEmergencyState,
+    demoRunning,
+    demoStep,
+    setDemoRunning,
+    setDemoStep,
   } = useStore();
 
   const [dbLevel, setDbLevel] = useState(48);
   const [vibrationVal, setVibrationVal] = useState(0.12);
   const [simRunning, setSimRunning] = useState(true);
   const [selectedSimType, setSelectedSimType] = useState<'normal' | 'deviation' | 'stop' | 'scream'>('normal');
+
+  const [safetyScore, setSafetyScore] = useState<number>(95);
+  const [safetyReason, setSafetyReason] = useState<string>('Evaluating safety factors...');
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+
+  // Journey timer count-up
+  useEffect(() => {
+    if (!activeJourney) return;
+    
+    const start = new Date(activeJourney.start_time).getTime();
+    
+    const interval = setInterval(() => {
+      const now = new Date().getTime();
+      const diff = Math.floor((now - start) / 1000);
+      setElapsedSeconds(diff >= 0 ? diff : 0);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [activeJourney]);
+
+  const formatTimer = (totalSeconds: number) => {
+    const hrs = Math.floor(totalSeconds / 3600);
+    const mins = Math.floor((totalSeconds % 3600) / 60);
+    const secs = totalSeconds % 60;
+    
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    
+    if (hrs > 0) {
+      return `${pad(hrs)}:${pad(mins)}:${pad(secs)}`;
+    }
+    return `${pad(mins)}:${pad(secs)}`;
+  };
+
+  // Evaluate route safety score
+  useEffect(() => {
+    if (activeJourney && activeJourney.expected_route) {
+      const fetchSafety = async () => {
+        try {
+          const res = await api.evaluateRouteSafety(activeJourney.expected_route);
+          setSafetyScore(res.score);
+          setSafetyReason(res.reason);
+        } catch (e) {
+          console.log('Safety check failed:', e);
+        }
+      };
+      fetchSafety();
+    }
+  }, [activeJourney]);
 
   const timerRef = useRef<any | null>(null);
   const sensorTimerRef = useRef<any | null>(null);
@@ -162,6 +214,42 @@ export default function ActiveJourneyScreen() {
     };
   }, [activeJourney, simRunning, selectedSimType, dbLevel, vibrationVal]);
 
+  // Demo Mode Sequencer
+  useEffect(() => {
+    if (!demoRunning) return;
+
+    console.log(`[Demo Sequencer] Executing step: ${demoStep}`);
+
+    let timeoutId: any;
+
+    if (demoStep === 1) {
+      // Step 1: Standard Commute for 3 seconds
+      setSelectedSimType('normal');
+      timeoutId = setTimeout(() => {
+        setDemoStep(2);
+      }, 3000);
+    } else if (demoStep === 2) {
+      // Step 2: Route Deviation wrong turn for 4 seconds
+      setSelectedSimType('deviation');
+      timeoutId = setTimeout(() => {
+        setDemoStep(3);
+      }, 4000);
+    } else if (demoStep === 3) {
+      // Step 3: Vocal distress scream for 4 seconds
+      setSelectedSimType('scream');
+      timeoutId = setTimeout(() => {
+        setDemoStep(4);
+      }, 4000);
+    } else if (demoStep === 4) {
+      // Step 4: Trigger SOS
+      handleSOS();
+    }
+
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, [demoRunning, demoStep]);
+
   const handleCancel = () => {
     Alert.alert(
       'Decommission Tracking',
@@ -186,27 +274,18 @@ export default function ActiveJourneyScreen() {
     );
   };
 
-  const handleSOS = () => {
-    Alert.alert(
-      'SOS Trigger',
-      'Trigger Emergency SOS now?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'TRIGGER',
-          style: 'destructive',
-          onPress: async () => {
-            setEmergencyState(true);
-            try {
-              await api.triggerSos();
-            } catch (err) {
-              console.log(err);
-            }
-            router.push('/sos/active');
-          },
-        },
-      ]
-    );
+  const handleSOS = async () => {
+    console.log('[SOS] Triggered immediately from Active Journey Screen.');
+    setEmergencyState(true);
+    setAnomalyPopup(false);
+    setDemoRunning(false);
+    setDemoStep(0);
+    try {
+      await api.triggerSos();
+    } catch (err) {
+      console.log('[SOS] Trigger error:', err);
+    }
+    router.push('/sos/active');
   };
 
   if (!activeJourney) return null;
@@ -227,6 +306,35 @@ export default function ActiveJourneyScreen() {
           >
             <Text style={styles.mapBtnText}>View Map Router</Text>
           </TouchableOpacity>
+        </View>
+
+        {/* Safety & Time Status Card */}
+        <View style={styles.card}>
+          <View style={styles.statusRowWidget}>
+            <View style={styles.statusBoxWidget}>
+              <Text style={styles.statusLabelWidget}>ELAPSED TIME</Text>
+              <Text style={styles.statusValueWidget}>{formatTimer(elapsedSeconds)}</Text>
+            </View>
+            
+            <View style={styles.statusBoxWidget}>
+              <Text style={styles.statusLabelWidget}>ROUTE MONITOR</Text>
+              <View style={[styles.statusBadgeWidget, routeDeviation ? styles.badgeRedWidget : styles.badgeGreenWidget]}>
+                <Text style={[styles.statusBadgeTextWidget, routeDeviation ? styles.textRedWidget : styles.textGreenWidget]}>
+                  {routeDeviation ? 'OFF ROUTE' : 'ON ROUTE'}
+                </Text>
+              </View>
+            </View>
+            
+            <View style={styles.statusBoxWidget}>
+              <Text style={styles.statusLabelWidget}>SAFETY RATING</Text>
+              <Text style={[styles.statusValueWidget, { color: safetyScore >= 75 ? '#10b881' : safetyScore >= 50 ? '#f59e0b' : '#ef4444' }]}>
+                {safetyScore}/100
+              </Text>
+            </View>
+          </View>
+          {safetyReason ? (
+            <Text style={styles.safetyReasonText}>{safetyReason}</Text>
+          ) : null}
         </View>
 
         {/* Dashboard grid */}
@@ -631,5 +739,66 @@ const styles = StyleSheet.create({
     color: '#9ca3af',
     fontSize: 12,
     fontWeight: 'bold',
+  },
+  statusRowWidget: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  statusBoxWidget: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#0f0f12',
+    borderRadius: 12,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.04)',
+  },
+  statusLabelWidget: {
+    fontSize: 8,
+    fontWeight: 'bold',
+    color: '#6b7280',
+    textTransform: 'uppercase',
+    marginBottom: 4,
+    textAlign: 'center',
+  },
+  statusValueWidget: {
+    fontSize: 14,
+    fontWeight: '900',
+    color: '#ffffff',
+  },
+  statusBadgeWidget: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  badgeGreenWidget: {
+    backgroundColor: 'rgba(16, 185, 129, 0.08)',
+    borderColor: 'rgba(16, 185, 129, 0.2)',
+    borderWidth: 1,
+  },
+  badgeRedWidget: {
+    backgroundColor: 'rgba(239, 68, 68, 0.08)',
+    borderColor: 'rgba(239, 68, 68, 0.2)',
+    borderWidth: 1,
+  },
+  statusBadgeTextWidget: {
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+  textGreenWidget: {
+    color: '#10b881',
+  },
+  textRedWidget: {
+    color: '#ef4444',
+  },
+  safetyReasonText: {
+    fontSize: 10,
+    color: '#9ca3af',
+    textAlign: 'center',
+    marginTop: 10,
+    lineHeight: 14,
+    fontStyle: 'italic',
   },
 });

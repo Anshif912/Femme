@@ -278,6 +278,22 @@ class DBService:
         return contact_data
 
     @staticmethod
+    def update_contact(user_phone: str, contact_id: str, contact_data: Dict) -> Dict:
+        if settings.USE_FIREBASE:
+            db_firestore.collection("users").document(user_phone).collection("contacts").document(contact_id).update(contact_data)
+            return contact_data
+            
+        conn = get_sqlite_conn()
+        conn.execute(
+            "UPDATE contacts SET name = ?, phone = ?, priority = ? WHERE user_phone = ? AND id = ?",
+            (contact_data["name"], contact_data["phone"], contact_data.get("priority", 1), user_phone, contact_id)
+        )
+        conn.commit()
+        conn.close()
+        contact_data["id"] = contact_id
+        return contact_data
+
+    @staticmethod
     def delete_contact(user_phone: str, contact_id: str):
         if settings.USE_FIREBASE:
             db_firestore.collection("users").document(user_phone).collection("contacts").document(contact_id).delete()

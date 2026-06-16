@@ -91,7 +91,12 @@ interface AppState {
   anomalyPopupActive: boolean;
   countdownSeconds: number;
   
+  demoRunning: boolean;
+  demoStep: number;
+  
   // Actions
+  setDemoRunning: (running: boolean) => void;
+  setDemoStep: (step: number) => void;
   setAuth: (user: User, token: string) => void;
   logout: () => void;
   updateUserFields: (fields: Partial<User>) => void;
@@ -131,7 +136,12 @@ export const useStore = create<AppState>()(
       isEmergency: false,
       anomalyPopupActive: false,
       countdownSeconds: 60,
+      
+      demoRunning: false,
+      demoStep: 0,
 
+      setDemoRunning: (running) => set({ demoRunning: running }),
+      setDemoStep: (step) => set({ demoStep: step }),
       setAuth: (user, token) => set({ user, token, isAuthenticated: true }),
       logout: () => set({
         token: null,
@@ -145,7 +155,9 @@ export const useStore = create<AppState>()(
         currentSpeed: 0,
         speedHistory: [],
         capsuleSnapshots: [],
-        anomalyPopupActive: false
+        anomalyPopupActive: false,
+        demoRunning: false,
+        demoStep: 0
       }),
       updateUserFields: (fields) => set((state) => ({
         user: state.user ? { ...state.user, ...fields } : null
@@ -203,7 +215,9 @@ export const useStore = create<AppState>()(
         deviationMeters: 0,
         capsuleSnapshots: [],
         anomalyPopupActive: false,
-        countdownSeconds: 60
+        countdownSeconds: 60,
+        demoRunning: false,
+        demoStep: 0
       })
     }),
     {

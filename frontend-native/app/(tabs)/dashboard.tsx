@@ -39,6 +39,8 @@ export default function DashboardScreen() {
     setActiveJourney,
     resetTelemetryState,
     setEmergencyState,
+    setDemoRunning,
+    setDemoStep,
   } = useStore();
 
   const [notificationText, setNotificationText] = useState('');
@@ -92,27 +94,56 @@ export default function DashboardScreen() {
     }
   };
 
-  const handleQuickSOS = () => {
-    Alert.alert(
-      'Trigger SOS',
-      'Are you sure you want to trigger SOS? This will immediately notify emergency contacts!',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'TRIGGER',
-          style: 'destructive',
-          onPress: async () => {
-            setEmergencyState(true);
-            try {
-              await api.triggerSos();
-            } catch (err) {
-              console.log(err);
-            }
-            router.push('/sos/active');
-          },
-        },
-      ]
-    );
+  const handleRunFullScenario = async () => {
+    console.log('[Demo] Starting full safety scenario simulation...');
+    setSimLoading(true);
+    setSimSuccess('');
+    setSimError('');
+    
+    const randomDigits = Math.floor(1000 + Math.random() * 9000);
+    const mockCab = `KA03MM${randomDigits}`;
+    const mockProvider = 'uber';
+    const pickup_address = 'Koramangala 4th Block, Bengaluru';
+    const pickup_lat = 12.9352;
+    const pickup_lng = 77.6245;
+    const dest_address = 'Indiranagar Double Road, Bengaluru';
+    const dest_lat = 12.9719;
+    const dest_lng = 77.6412;
+
+    try {
+      const res = await api.startJourney({
+        cab_number: mockCab,
+        provider: mockProvider,
+        pickup_address,
+        pickup_lat,
+        pickup_lng,
+        dest_address,
+        dest_lat,
+        dest_lng,
+      });
+
+      setActiveJourney(res);
+      setDemoRunning(true);
+      setDemoStep(1);
+      console.log('[Demo] Journey started. Redirecting to active route monitoring...');
+      router.push('/journey/active');
+    } catch (err: any) {
+      setSimError(err.message || 'Failed to start demo journey.');
+      console.log('[Demo] Start error:', err);
+    } finally {
+      setSimLoading(false);
+    }
+  };
+
+  const handleQuickSOS = async () => {
+    console.log('[SOS] Quick SOS triggered immediately.');
+    setEmergencyState(true);
+    try {
+      await api.triggerSos();
+    } catch (err) {
+      console.log('[SOS] Trigger error:', err);
+    }
+    router.push('/sos/active');
   };
 
   const handleCancelActive = () => {
@@ -319,13 +350,22 @@ export default function DashboardScreen() {
             <Text style={styles.promoDesc}>
               Register your ride or parse ride receipts to activate background telemetry and de-escalation logic.
             </Text>
-            <TouchableOpacity
-              style={styles.setupButton}
-              onPress={() => router.push('/journey/setup')}
-            >
-              <Play size={14} color="#ffffff" fill="#ffffff" />
-              <Text style={styles.setupButtonText}>Configure Journey</Text>
-            </TouchableOpacity>
+            <View style={styles.promoButtonsRow}>
+              <TouchableOpacity
+                style={styles.setupButton}
+                onPress={() => router.push('/journey/setup')}
+              >
+                <Play size={14} color="#ffffff" fill="#ffffff" />
+                <Text style={styles.setupButtonText}>Configure Journey</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.demoScenarioButton}
+                onPress={handleRunFullScenario}
+              >
+                <Zap size={14} color="#ffffff" fill="#ffffff" />
+                <Text style={styles.demoScenarioButtonText}>Run Demo Scenario</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         )}
 
@@ -904,5 +944,31 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     lineHeight: 14,
     marginTop: 2,
+  },
+  promoButtonsRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 8,
+    width: '100%',
+  },
+  demoScenarioButton: {
+    flexDirection: 'row',
+    height: 44,
+    backgroundColor: '#7c3aed',
+    borderRadius: 12,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    shadowColor: '#8b5cf6',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  demoScenarioButtonText: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: 'bold',
   },
 });

@@ -118,6 +118,9 @@ export const api = {
   addContact: (contact: { name: string; phone: string; priority: number }) => 
     request('/contacts', { method: 'POST', body: JSON.stringify(contact) }),
     
+  updateContact: (contactId: string, contact: { name: string; phone: string; priority: number }) => 
+    request(`/contacts/${contactId}`, { method: 'PUT', body: JSON.stringify(contact) }),
+    
   deleteContact: (contactId: string) => 
     request(`/contacts/${contactId}`, { method: 'DELETE' }),
 

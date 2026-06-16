@@ -11,13 +11,14 @@ import {
   SafeAreaView,
 } from 'react-native';
 import { api } from '../../utils/api';
-import { Users, UserPlus, Trash2, ShieldAlert, Check } from 'lucide-react-native';
+import { Users, UserPlus, Trash2, ShieldAlert, Check, Edit2 } from 'lucide-react-native';
 
 export default function ContactsScreen() {
   const [contacts, setContacts] = useState<any[]>([]);
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [priority, setPriority] = useState<number>(1);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
@@ -36,7 +37,25 @@ export default function ContactsScreen() {
     fetchContacts();
   }, []);
 
-  const handleAdd = async () => {
+  const handleEditSelect = (contact: any) => {
+    setEditingId(contact.id);
+    setName(contact.name);
+    setPhone(contact.phone);
+    setPriority(contact.priority);
+    setError('');
+    setMessage('');
+  };
+
+  const handleCancelEdit = () => {
+    setEditingId(null);
+    setName('');
+    setPhone('');
+    setPriority(1);
+    setError('');
+    setMessage('');
+  };
+
+  const handleSaveContact = async () => {
     setError('');
     setMessage('');
 
@@ -47,18 +66,28 @@ export default function ContactsScreen() {
 
     setLoading(true);
     try {
-      await api.addContact({
-        name: name.trim(),
-        phone: phone.trim(),
-        priority,
-      });
+      if (editingId) {
+        await api.updateContact(editingId, {
+          name: name.trim(),
+          phone: phone.trim(),
+          priority,
+        });
+        setMessage('Contact details updated successfully.');
+        setEditingId(null);
+      } else {
+        await api.addContact({
+          name: name.trim(),
+          phone: phone.trim(),
+          priority,
+        });
+        setMessage('Contact successfully registered as priority guardian.');
+      }
       setName('');
       setPhone('');
       setPriority(1);
-      setMessage('Contact successfully registered as priority guardian.');
       fetchContacts();
     } catch (err: any) {
-      setError(err.message || 'Failed to register contact.');
+      setError(err.message || 'Failed to save contact.');
     } finally {
       setLoading(false);
     }
@@ -173,15 +202,25 @@ export default function ContactsScreen() {
 
             <TouchableOpacity
               style={[styles.button, loading && styles.buttonDisabled]}
-              onPress={handleAdd}
+              onPress={handleSaveContact}
               disabled={loading}
             >
               {loading ? (
                 <ActivityIndicator size="small" color="#ffffff" />
               ) : (
-                <Text style={styles.buttonText}>Register Priority Guardian</Text>
+                <Text style={styles.buttonText}>{editingId ? 'Update Guardian Details' : 'Register Priority Guardian'}</Text>
               )}
             </TouchableOpacity>
+
+            {editingId && (
+              <TouchableOpacity
+                style={styles.cancelEditBtn}
+                onPress={handleCancelEdit}
+                disabled={loading}
+              >
+                <Text style={styles.cancelEditBtnText}>Cancel Editing</Text>
+              </TouchableOpacity>
+            )}
           </View>
         </View>
 
@@ -205,12 +244,21 @@ export default function ContactsScreen() {
                   </View>
                 </View>
 
-                <TouchableOpacity
-                  style={styles.deleteBtn}
-                  onPress={() => handleDelete(contact.id)}
-                >
-                  <Trash2 size={16} color="#ef4444" />
-                </TouchableOpacity>
+                <View style={styles.actionRowList}>
+                  <TouchableOpacity
+                    style={styles.editBtn}
+                    onPress={() => handleEditSelect(contact)}
+                  >
+                    <Edit2 size={14} color="#fb7185" />
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.deleteBtn}
+                    onPress={() => handleDelete(contact.id)}
+                  >
+                    <Trash2 size={16} color="#ef4444" />
+                  </TouchableOpacity>
+                </View>
               </View>
             ))}
 
@@ -434,5 +482,35 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingVertical: 24,
     fontWeight: '300',
+  },
+  cancelEditBtn: {
+    height: 48,
+    backgroundColor: '#1e1e24',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 8,
+  },
+  cancelEditBtnText: {
+    color: '#9ca3af',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  actionRowList: {
+    flexDirection: 'row',
+    gap: 8,
+    alignItems: 'center',
+  },
+  editBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: '#1e1e24',
+    borderColor: 'rgba(255, 255, 255, 0.04)',
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

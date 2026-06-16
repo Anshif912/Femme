@@ -26,28 +26,42 @@ async function request(path: string, options: RequestInit = {}) {
     headers.set('Content-Type', 'application/json');
   }
 
-  const response = await fetch(`${apiBase}${path}`, {
-    ...options,
-    headers
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 5000);
 
-  if (!response.ok) {
-    let errorDetail = 'API Request Failed';
-    try {
-      const errorJson = await response.json();
-      errorDetail = errorJson.detail || JSON.stringify(errorJson);
-    } catch (_) {}
-    throw new Error(errorDetail);
+  try {
+    const response = await fetch(`${apiBase}${path}`, {
+      ...options,
+      headers,
+      signal: controller.signal
+    });
+    
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      let errorDetail = 'API Request Failed';
+      try {
+        const errorJson = await response.json();
+        errorDetail = errorJson.detail || JSON.stringify(errorJson);
+      } catch (_) {}
+      throw new Error(errorDetail);
+    }
+
+    // Handle blob responses (e.g. PDF report download)
+    const contentType = response.headers.get('Content-Type');
+    if (contentType && contentType.includes('application/pdf')) {
+      // In React Native, fetch returns a blob that we can extract
+      return response.blob();
+    }
+
+    return response.json();
+  } catch (err: any) {
+    clearTimeout(timeoutId);
+    if (err.name === 'AbortError') {
+      throw new Error('Connection timed out. Ensure the backend server is running and reachable.');
+    }
+    throw err;
   }
-
-  // Handle blob responses (e.g. PDF report download)
-  const contentType = response.headers.get('Content-Type');
-  if (contentType && contentType.includes('application/pdf')) {
-    // In React Native, fetch returns a blob that we can extract
-    return response.blob();
-  }
-
-  return response.json();
 }
 
 export const api = {
@@ -114,6 +128,9 @@ export const api = {
     
   addContact: (contact: { name: string; phone: string; priority: number }) => 
     request('/contacts', { method: 'POST', body: JSON.stringify(contact) }),
+    
+  updateContact: (contactId: string, contact: { name: string; phone: string; priority: number }) => 
+    request(`/contacts/${contactId}`, { method: 'PUT', body: JSON.stringify(contact) }),
     
   deleteContact: (contactId: string) => 
     request(`/contacts/${contactId}`, { method: 'DELETE' }),
