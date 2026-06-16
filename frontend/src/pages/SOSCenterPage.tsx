@@ -52,6 +52,11 @@ export const SOSCenterPage: React.FC = () => {
         }
         setEmergencyState(true);
 
+        const latVal = active?.current_lat || 12.9716;
+        const lngVal = active?.current_lng || 77.5946;
+        const cabNum = active?.cab_number || "EMERGENCY_SOS";
+        const nameVal = user?.name || "Femme Traveler";
+
         setSteps({
           emergencyActivated: res.success ? true : false,
           smsSent: res.sms_sent,
@@ -61,6 +66,23 @@ export const SOSCenterPage: React.FC = () => {
           evidenceLocked: true,
           emergencyTimestamp: new Date().toLocaleTimeString() + " UTC"
         });
+
+        // AUTO TRANSMIT ALERTS: Automatically open WhatsApp chat with primary guardian prefilled
+        if (cont.length > 0) {
+          const primaryContact = cont[0];
+          const linkPhone = primaryContact.phone.replace(/[^\d+]/g, '');
+          const mapsLink = `https://maps.google.com/?q=${latVal},${lngVal}`;
+          const timestampStr = new Date().toISOString();
+          const autoMessage = `🚨 FEMME EMERGENCY ALERT\n\nUser: ${nameVal}\n\nLocation:\n${mapsLink}\n\nCab:\n${cabNum}\n\nTimestamp:\n${timestampStr}\n\nPossible emergency detected.`;
+          
+          const whatsappUrl = `https://api.whatsapp.com/send?phone=${encodeURIComponent(linkPhone)}&text=${encodeURIComponent(autoMessage)}`;
+          console.log("[Auto-Alert] Directing user to WhatsApp dispatch:", whatsappUrl);
+          
+          const newWindow = window.open(whatsappUrl, '_blank');
+          if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
+            window.location.href = whatsappUrl;
+          }
+        }
       } catch (err) {
         console.error("SOS trigger fail:", err);
       } finally {
