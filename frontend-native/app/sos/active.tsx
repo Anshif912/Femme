@@ -18,7 +18,7 @@ import { ShieldAlert, Volume2, VolumeX, Phone, MapPin, Check } from 'lucide-reac
 
 export default function SOSScreen() {
   const router = useRouter();
-  const { activeJourney, resetTelemetryState, setActiveJourney, setEmergencyState } = useStore();
+  const { user, currentLat, currentLng, activeJourney, resetTelemetryState, setActiveJourney, setEmergencyState } = useStore();
 
   const [sirenPlaying, setSirenPlaying] = useState(true);
   const [blinkingState, setBlinkingState] = useState(false);
@@ -29,6 +29,7 @@ export default function SOSScreen() {
   const [steps, setSteps] = useState({
     emergencyActivated: false,
     smsSent: false,
+    smsStatus: '',
     callInitiated: false,
     liveTrackingActive: false,
     evidenceLocked: false,
@@ -40,10 +41,26 @@ export default function SOSScreen() {
     const triggerEmergencyProtocol = async () => {
       setLoading(true);
       try {
-        const res = await api.triggerSos();
+        console.log("SOS button pressed");
 
-        const cont = await api.getContacts();
-        setContacts(cont);
+        let cont = [];
+        try {
+          cont = await api.getContacts();
+          setContacts(cont);
+        } catch (e) {
+          console.log("Failed to load contacts for payload:", e);
+        }
+
+        const payload = {
+          user: user,
+          journey: activeJourney,
+          location: { latitude: currentLat, longitude: currentLng },
+          trustedContacts: cont
+        };
+        console.log("SOS request payload", payload);
+
+        const res = await api.triggerSos();
+        console.log("SOS response", res);
         
         const active = await api.getActiveJourney();
         if (active) {
@@ -54,6 +71,7 @@ export default function SOSScreen() {
         setSteps({
           emergencyActivated: res.success ? true : false,
           smsSent: res.sms_sent,
+          smsStatus: res.sms_status || (res.sms_sent ? 'SMS Sent' : 'SMS Failed'),
           callInitiated: res.call_initiated,
           liveTrackingActive: true,
           evidenceLocked: true,
@@ -172,7 +190,7 @@ export default function SOSScreen() {
           <View style={styles.checklist}>
             {[
               { key: 'emergencyActivated', text: 'Emergency Activated' },
-              { key: 'smsSent', text: 'SMS Broadcast Sent' },
+              { key: 'smsSent', text: steps.smsStatus || 'SMS Broadcast Sent' },
               { key: 'callInitiated', text: 'Guardian Automated Call Initiated' },
               { key: 'liveTrackingActive', text: 'Live GPS Broadcast Active' },
               { key: 'evidenceLocked', text: 'Sealed Evidence Vault Locked' },

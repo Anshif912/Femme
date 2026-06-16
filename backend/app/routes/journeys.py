@@ -5,6 +5,7 @@ from datetime import datetime
 from app.auth import get_current_user
 from app.database import DBService
 from app.utils.routing import fetch_route, check_route_deviation, score_safety, geocode_address
+from app.utils.phone_validation import format_to_e164
 
 router = APIRouter(prefix="/journeys", tags=["Journeys"])
 
@@ -168,6 +169,7 @@ async def cancel_journey(current_user: Dict = Depends(get_current_user)):
 
 @router.post("/active/sos", response_model=Dict)
 async def trigger_sos(current_user: Dict = Depends(get_current_user)):
+    print("SOS Triggered")
     user_phone = current_user["phone"]
     journey = DBService.get_active_journey(user_phone)
     
@@ -213,11 +215,87 @@ async def trigger_sos(current_user: Dict = Depends(get_current_user)):
 
     # Notify emergency contacts immediately
     contacts = DBService.get_contacts(user_phone)
-    for c in contacts:
-        msg = f"[FEMME EMERGENCY] SOS ALERT triggered by {current_user.get('name', 'User')}! Cab: {journey.get('cab_number')}. Track live coordinate: http://femme-safety.app/track/{journey['id']}"
-        print(f"!!! SIMULATED EMERGENCY SMS to {c['name']} ({c['phone']}): {msg} !!!")
+    print("Guardian Contacts Loaded")
+    
+    timestamp_str = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")
+    origin = journey.get("pickup_address", "Unknown Origin")
+    destination = journey.get("dest_address", "Unknown Destination")
+    cab_number = journey.get("cab_number", "Unknown Cab")
+    user_name = current_user.get("name", "User")
+    
+    alert_message = (
+        f"🚨 FEMME EMERGENCY ALERT\n\n"
+        f"User: {user_name}\n\n"
+        f"Location:\n"
+        f"https://maps.google.com/?q={lat},{lng}\n\n"
+        f"Journey:\n"
+        f"{origin} → {destination}\n\n"
+        f"Cab:\n"
+        f"{cab_number}\n\n"
+        f"Time:\n"
+        f"{timestamp_str}\n\n"
+        f"Please contact immediately."
+    )
 
-    return updated_journey
+    print("Preparing SMS")
+    
+    sms_sent = False
+    sms_errors = []
+
+    for c in contacts:
+        raw_phone = c.get("phone", "")
+        formatted_phone = format_to_e164(raw_phone)
+        if not formatted_phone:
+            invalid_msg = f"Invalid phone number detected: {raw_phone}"
+            print(invalid_msg)
+            sms_errors.append(f"Invalid phone number for {c['name']}")
+            continue
+
+        print("Sending SMS")
+        from app.config import settings
+        if settings.SMS_PROVIDER == "twilio" and settings.TWILIO_ACCOUNT_SID:
+            try:
+                from twilio.rest import Client
+                client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
+                
+                client.messages.create(
+                    body=alert_message,
+                    from_=settings.TWILIO_FROM_NUMBER,
+                    to=formatted_phone
+                )
+                print("SMS Sent Successfully")
+                sms_sent = True
+            except Exception as e:
+                print("SMS Failed")
+                sms_errors.append(str(e))
+        else:
+            # Simulation Mode
+            print("SMS Sent Successfully")
+            sms_sent = True
+            print("==================================================")
+            print(f"🚨 [SIMULATED SMS] ALERT DISPATCHED TO {c['name']} ({formatted_phone}):")
+            print(alert_message)
+            print("==================================================")
+
+    # Log overall status
+    if len(contacts) == 0:
+        sms_status = "SMS Failed: No trusted contacts saved."
+        print(sms_status)
+    elif sms_errors and not sms_sent:
+        sms_status = f"SMS Failed: {'; '.join(sms_errors)}"
+        print(sms_status)
+    else:
+        sms_status = "SMS Sent"
+        print(sms_status)
+
+    # Return structure matching expected journey
+    return {
+        "id": updated_journey["id"],
+        "status": updated_journey["status"],
+        "sms_sent": sms_sent,
+        "sms_status": sms_status,
+        "contacts_notified": len(contacts)
+    }
 
 @router.post("/score", response_model=Dict)
 async def check_route_safety(route_coords: List[List[float]], current_user: Dict = Depends(get_current_user)):

@@ -41,16 +41,29 @@ class Settings(BaseSettings):
 
 settings = Settings()
 
-# Startup validation for Twilio Verify variables
+# Startup validation for Twilio variables
 if settings.SMS_PROVIDER == "twilio":
     missing_vars = []
     if not settings.TWILIO_ACCOUNT_SID:
         missing_vars.append("TWILIO_ACCOUNT_SID")
     if not settings.TWILIO_AUTH_TOKEN:
         missing_vars.append("TWILIO_AUTH_TOKEN")
-    if not settings.TWILIO_VERIFY_SERVICE_SID:
-        missing_vars.append("TWILIO_VERIFY_SERVICE_SID")
+    if not settings.TWILIO_FROM_NUMBER:
+        missing_vars.append("TWILIO_FROM_NUMBER")
+        
     if missing_vars:
+        error_msg = f"CRITICAL ERROR: Twilio configuration missing required variables: {', '.join(missing_vars)}"
         print("==================================================")
-        print(f"⚠️ STARTUP WARNING: Twilio configuration missing: {', '.join(missing_vars)}")
+        print(error_msg)
+        print("==================================================")
+        raise SystemExit(error_msg)
+    else:
+        print("==================================================")
+        print("Twilio SID Loaded")
+        try:
+            from twilio.rest import Client
+            Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
+            print("Twilio Client Initialized")
+        except Exception as e:
+            raise SystemExit(f"Twilio Client Initialization failed: {e}")
         print("==================================================")

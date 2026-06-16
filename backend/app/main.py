@@ -9,6 +9,7 @@ from datetime import datetime, timedelta
 from app.config import settings
 from app.database import init_sqlite_db, DBService
 from app.auth import get_current_user, create_access_token, generate_otp, send_sms_otp, send_twilio_verify_otp, check_twilio_verify_otp
+from app.utils.phone_validation import format_to_e164
 from app.routes import journeys, contacts, evidence, reports, simulation
 
 # Initialize local SQLite DB tables
@@ -134,6 +135,7 @@ async def update_settings(settings_data: Dict, current_user: Dict = Depends(get_
 
 @app.post(f"{settings.API_V1_STR}/sos/trigger", response_model=Dict)
 async def sos_trigger(current_user: Dict = Depends(get_current_user)):
+    print("SOS Triggered")
     user_phone = current_user["phone"]
     
     # 1. Retrieve active journey. If none, create an ad-hoc emergency journey
@@ -157,6 +159,7 @@ async def sos_trigger(current_user: Dict = Depends(get_current_user)):
 
     # 3. Retrieve trusted contacts
     contacts = DBService.get_contacts(user_phone)
+    print("Guardian Contacts Loaded")
 
     # 4. Create emergency record & 5. Lock journey evidence
     updates = {"status": "emergency"}
@@ -194,23 +197,35 @@ async def sos_trigger(current_user: Dict = Depends(get_current_user)):
     alert_message = (
         f"🚨 FEMME EMERGENCY ALERT\n\n"
         f"User: {user_name}\n\n"
-        f"Live Location:\n"
+        f"Location:\n"
         f"https://maps.google.com/?q={lat},{lng}\n\n"
-        f"Cab Number:\n"
-        f"{cab_number}\n\n"
-        f"Route:\n"
+        f"Journey:\n"
         f"{origin} → {destination}\n\n"
+        f"Cab:\n"
+        f"{cab_number}\n\n"
         f"Time:\n"
         f"{timestamp_str}\n\n"
         f"Please contact immediately."
     )
 
+    print("Preparing SMS")
+    
     sms_sent = False
     call_initiated = False
     whatsapp_sent = False
+    sms_errors = []
 
     # Send multi-channel alerts to emergency contacts (Voice calls are processed sequentially)
     for c in contacts:
+        raw_phone = c.get("phone", "")
+        formatted_phone = format_to_e164(raw_phone)
+        if not formatted_phone:
+            invalid_msg = f"Invalid phone number detected: {raw_phone}"
+            print(invalid_msg)
+            sms_errors.append(f"Invalid phone number for {c['name']}: {raw_phone}")
+            continue
+
+        print("Sending SMS")
         if settings.SMS_PROVIDER == "twilio" and settings.TWILIO_ACCOUNT_SID:
             try:
                 from twilio.rest import Client
@@ -220,54 +235,67 @@ async def sos_trigger(current_user: Dict = Depends(get_current_user)):
                 client.messages.create(
                     body=alert_message,
                     from_=settings.TWILIO_FROM_NUMBER,
-                    to=c["phone"]
+                    to=formatted_phone
                 )
+                print("SMS Sent Successfully")
                 sms_sent = True
-                print(f"[SOS] Sent real Twilio SMS alert to {c['name']} ({c['phone']})")
                 
                 # 2. Voice Call Dispatch with custom message sequentially
-                twiml_content = (
-                    "<Response>"
-                    "<Say voice='alice'>Emergency alert from FEMME. The user may be in danger. "
-                    "Please check the SMS location link immediately.</Say>"
-                    "</Response>"
-                )
-                client.calls.create(
-                    to=c["phone"],
-                    from_=settings.TWILIO_FROM_NUMBER,
-                    twiml=twiml_content
-                )
-                call_initiated = True
-                print(f"[SOS] Initiated automated Twilio Voice Call to {c['name']} ({c['phone']})")
-
+                try:
+                    twiml_content = (
+                        "<Response>"
+                        "<Say voice='alice'>Emergency alert from FEMME. The user may be in danger. "
+                        "Please check the SMS location link immediately.</Say>"
+                        "</Response>"
+                    )
+                    client.calls.create(
+                        to=formatted_phone,
+                        from_=settings.TWILIO_FROM_NUMBER,
+                        twiml=twiml_content
+                    )
+                    call_initiated = True
+                    print(f"[SOS] Initiated automated Twilio Voice Call to {c['name']} ({formatted_phone})")
+                except Exception as call_err:
+                    print(f"[SOS] Twilio call failed: {call_err}")
+                
                 # 3. WhatsApp Dispatch (using Sandbox numbers)
                 try:
                     client.messages.create(
                         body=alert_message,
                         from_=f"whatsapp:{settings.TWILIO_FROM_NUMBER}",
-                        to=f"whatsapp:{c['phone']}"
+                        to=f"whatsapp:{formatted_phone}"
                     )
                     whatsapp_sent = True
-                    print(f"[SOS] Sent WhatsApp template text to {c['phone']}")
+                    print(f"[SOS] Sent WhatsApp template text to {formatted_phone}")
                 except Exception as wa_err:
                     print(f"[SOS] WhatsApp Sandbox dispatch skipped: {wa_err}")
 
             except Exception as e:
-                print(f"[SOS] Twilio dispatch to {c['phone']} failed: {e}. Falling back to simulation.")
-                sms_sent = True
-                call_initiated = True
-                whatsapp_sent = True
+                print("SMS Failed")
+                sms_errors.append(str(e))
         else:
             # Simulation Mode Logs
+            print("SMS Sent Successfully")
             sms_sent = True
             call_initiated = True
             whatsapp_sent = True
             print("==================================================")
-            print(f"🚨 [SIMULATED SMS] ALERT DISPATCHED TO {c['name']} ({c['phone']}):")
+            print(f"🚨 [SIMULATED SMS] ALERT DISPATCHED TO {c['name']} ({formatted_phone}):")
             print(alert_message)
-            print(f"📞 [SIMULATED CALL] INITIATED TO {c['name']} ({c['phone']}) -> Speaking TwiML wailer.")
-            print(f"💬 [SIMULATED WHATSAPP] SENT TO {c['name']} ({c['phone']})")
+            print(f"📞 [SIMULATED CALL] INITIATED TO {c['name']} ({formatted_phone}) -> Speaking TwiML wailer.")
+            print(f"💬 [SIMULATED WHATSAPP] SENT TO {c['name']} ({formatted_phone})")
             print("==================================================")
+
+    # Log overall status
+    if len(contacts) == 0:
+        sms_status = "SMS Failed: No trusted contacts saved."
+        print(sms_status)
+    elif sms_errors and not sms_sent:
+        sms_status = f"SMS Failed: {'; '.join(sms_errors)}"
+        print(sms_status)
+    else:
+        sms_status = "SMS Sent"
+        print(sms_status)
 
     # 9. Create FIR draft entry (pre-compiles ReportLab PDF template)
     try:
@@ -285,10 +313,66 @@ async def sos_trigger(current_user: Dict = Depends(get_current_user)):
     return {
         "success": True,
         "sms_sent": sms_sent,
+        "sms_status": sms_status,
         "call_initiated": call_initiated,
         "tracking_link": tracking_link,
         "contacts_notified": len(contacts)
     }
+
+
+@app.post("/debug/test-sms", response_model=Dict)
+async def test_sms(recipient_phone: str):
+    print("Test SMS Triggered")
+    
+    if not settings.TWILIO_ACCOUNT_SID or not settings.TWILIO_AUTH_TOKEN or not settings.TWILIO_FROM_NUMBER:
+        raise HTTPException(
+            status_code=500,
+            detail="Twilio configuration is missing required variables."
+        )
+        
+    formatted_phone = format_to_e164(recipient_phone)
+    if not formatted_phone:
+        print(f"Invalid phone number: {recipient_phone}")
+        return {
+            "twilio_sid": None,
+            "recipient": recipient_phone,
+            "delivery_status": "SMS Failed: Invalid Phone Number",
+            "Twilio SID": None,
+            "Recipient": recipient_phone,
+            "Delivery Status": "SMS Failed: Invalid Phone Number"
+        }
+        
+    try:
+        from twilio.rest import Client
+        client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
+        
+        test_message = "🚨 FEMME Test Emergency Alert SMS. If you receive this, end-to-end Twilio delivery is verified."
+        
+        message = client.messages.create(
+            body=test_message,
+            from_=settings.TWILIO_FROM_NUMBER,
+            to=formatted_phone
+        )
+        
+        print("SMS Sent Successfully")
+        return {
+            "twilio_sid": message.sid,
+            "recipient": formatted_phone,
+            "delivery_status": "SMS Sent",
+            "Twilio SID": message.sid,
+            "Recipient": formatted_phone,
+            "Delivery Status": "SMS Sent"
+        }
+    except Exception as e:
+        print("SMS Failed")
+        return {
+            "twilio_sid": None,
+            "recipient": formatted_phone,
+            "delivery_status": f"SMS Failed: {e}",
+            "Twilio SID": None,
+            "Recipient": formatted_phone,
+            "Delivery Status": f"SMS Failed: {e}"
+        }
 
 
 # Include Feature Routers

@@ -6,7 +6,7 @@ import { ShieldAlert, Volume2, VolumeX, Eye, Phone, MapPin, CheckCircle2, Shield
 
 export const SOSCenterPage: React.FC = () => {
   const navigate = useNavigate();
-  const { activeJourney, resetTelemetryState, setActiveJourney, setEmergencyState } = useStore();
+  const { user, currentLat, currentLng, activeJourney, resetTelemetryState, setActiveJourney, setEmergencyState } = useStore();
 
   const [sirenPlaying, setSirenPlaying] = useState(true);
   const [blinkingState, setBlinkingState] = useState(false);
@@ -16,6 +16,7 @@ export const SOSCenterPage: React.FC = () => {
   const [steps, setSteps] = useState({
     emergencyActivated: false,
     smsSent: false,
+    smsStatus: '',
     callInitiated: false,
     liveTrackingActive: false,
     evidenceLocked: false,
@@ -31,11 +32,27 @@ export const SOSCenterPage: React.FC = () => {
     const triggerEmergencyProtocol = async () => {
       setLoading(true);
       try {
+        console.log("SOS button pressed");
+
+        let cont = [];
+        try {
+          cont = await api.getContacts();
+          setContacts(cont);
+        } catch (e) {
+          console.error("Failed to load contacts for payload:", e);
+        }
+
+        const payload = {
+          user: user,
+          journey: activeJourney,
+          location: { latitude: currentLat, longitude: currentLng },
+          trustedContacts: cont
+        };
+        console.log("SOS request payload", payload);
+
         const res = await api.triggerSos();
+        console.log("SOS response", res);
         
-        // Load data
-        const cont = await api.getContacts();
-        setContacts(cont);
         const active = await api.getActiveJourney();
         if (active) {
           setActiveJourney(active);
@@ -45,6 +62,7 @@ export const SOSCenterPage: React.FC = () => {
         setSteps({
           emergencyActivated: res.success ? true : false,
           smsSent: res.sms_sent,
+          smsStatus: res.sms_status || (res.sms_sent ? 'SMS Sent' : 'SMS Failed'),
           callInitiated: res.call_initiated,
           liveTrackingActive: true,
           evidenceLocked: true,
@@ -174,7 +192,9 @@ export const SOSCenterPage: React.FC = () => {
             ) : (
               <Loader2 className="w-3.5 h-3.5 text-red-500 animate-spin" />
             )}
-            <span className={steps.smsSent ? 'text-gray-300' : 'text-gray-500'}>SMS Sent</span>
+            <span className={steps.smsSent ? 'text-gray-300' : 'text-gray-500'}>
+              {steps.smsStatus || 'SMS Sent'}
+            </span>
           </div>
 
           <div className="flex items-center gap-2.5">
