@@ -2,6 +2,7 @@ import React from 'react';
 import { ActivityIndicator, View, StyleSheet } from 'react-native';
 
 export default function Index() {
+  console.log('[IndexScreen] Rendering loading index...');
   return (
     <View style={styles.container}>
       <ActivityIndicator size="large" color="#f43f5e" />

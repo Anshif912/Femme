@@ -34,11 +34,14 @@ export default function RootLayout() {
 
   // Monitor Zustand hydration from SecureStore
   useEffect(() => {
+    console.log('[RootLayout] Hydration effect triggered. hasHydrated:', useStore.persist.hasHydrated());
     const unsubHydrate = useStore.persist.onFinishHydration(() => {
+      console.log('[RootLayout] Hydration finished event.');
       setIsHydrated(true);
     });
 
     if (useStore.persist.hasHydrated()) {
+      console.log('[RootLayout] Store already hydrated.');
       setIsHydrated(true);
     }
 
@@ -49,6 +52,7 @@ export default function RootLayout() {
 
   // Handle routing based on auth state
   useEffect(() => {
+    console.log('[RootLayout] Navigation effect. isHydrated:', isHydrated, 'isAuthenticated:', isAuthenticated, 'segments:', segments);
     if (!isHydrated) return;
 
     const inAuthGroup = segments[0] === '(auth)';
@@ -56,10 +60,12 @@ export default function RootLayout() {
 
     if (!isAuthenticated) {
       if (!inAuthGroup) {
+        console.log('[RootLayout] Redirecting to login...');
         router.replace('/(auth)/login');
       }
     } else {
       if (!inTabsGroup && segments[0] !== 'journey' && segments[0] !== 'sos') {
+        console.log('[RootLayout] Redirecting to dashboard...');
         router.replace('/(tabs)/dashboard');
       }
     }
@@ -101,6 +107,7 @@ export default function RootLayout() {
   };
 
   if (!isHydrated) {
+    console.log('[RootLayout] Rendering unhydrated loading container spinner...');
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#f43f5e" />

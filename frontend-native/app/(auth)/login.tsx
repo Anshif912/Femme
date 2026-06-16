@@ -17,6 +17,7 @@ import { api } from '../../utils/api';
 import { Shield, Smartphone, KeyRound, ArrowRight, Info, CheckSquare } from 'lucide-react-native';
 
 export default function LoginScreen() {
+  console.log('[LoginScreen] Rendering login form...');
   const router = useRouter();
   const setAuth = useStore((state) => state.setAuth);
 

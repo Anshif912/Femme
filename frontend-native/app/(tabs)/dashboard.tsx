@@ -26,6 +26,7 @@ import {
 } from 'lucide-react-native';
 
 export default function DashboardScreen() {
+  console.log('[DashboardScreen] Rendering dashboard...');
   const router = useRouter();
   const {
     user,
