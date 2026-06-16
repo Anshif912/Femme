@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
 import api from '../utils/api';
-import { ShieldAlert, Volume2, VolumeX, Phone, CheckCircle2, Loader2, ShieldAlert as AlertIcon, Eye } from 'lucide-react';
+import { ShieldAlert, Volume2, VolumeX, Phone, CheckCircle2, Loader2, ShieldAlert as AlertIcon, Eye, Smartphone, MessageSquare, MessageCircle } from 'lucide-react';
 
 export const SOSCenterPage: React.FC = () => {
   const navigate = useNavigate();
@@ -175,6 +175,15 @@ export const SOSCenterPage: React.FC = () => {
   // Status mapping checkers
   const hasAcknowledged = alertStatuses.some((a: any) => a.acknowledged === 1);
 
+  const userName = user?.name || "Femme Traveler";
+  const lat = activeJourney?.current_lat || 12.9716;
+  const lng = activeJourney?.current_lng || 77.5946;
+  const cabNumber = activeJourney?.cab_number || "EMERGENCY_SOS";
+  const mapsLink = `https://maps.google.com/?q=${lat},${lng}`;
+  const timestamp = new Date().toISOString();
+
+  const emergencyMessage = `🚨 FEMME EMERGENCY ALERT\n\nUser: ${userName}\n\nLocation:\n${mapsLink}\n\nCab:\n${cabNumber}\n\nTimestamp:\n${timestamp}\n\nPossible emergency detected.`;
+
   return (
     <div className={`min-h-[80vh] rounded-3xl p-6 transition-all duration-300 ${
       blinkingState ? 'bg-red-950/40 border-2 border-red-500/80 glow-rose' : 'bg-dark-900 border-2 border-gray-800'
@@ -304,6 +313,87 @@ export const SOSCenterPage: React.FC = () => {
           <p>Latitude: {activeJourney?.current_lat?.toFixed(5) || "12.9716"}</p>
           <p>Longitude: {activeJourney?.current_lng?.toFixed(5) || "77.5946"}</p>
           <p>Cab Number: {activeJourney?.cab_number || "EMERGENCY_SOS"}</p>
+        </div>
+      </div>
+
+      {/* 100% Free Device Native Alert Center */}
+      <div className="glass-card p-6 max-w-sm w-full rounded-2xl border border-emerald-500/25 text-left space-y-4">
+        <div className="flex items-center gap-2 border-b border-gray-800 pb-3 mb-1">
+          <Smartphone className="w-5 h-5 text-emerald-400 animate-pulse" />
+          <div>
+            <h4 className="text-xs font-black text-white uppercase tracking-wider">Free Mobile Alert Center</h4>
+            <p className="text-[10px] text-emerald-400 font-medium">Zero-cost dispatches using native device apps</p>
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          {contacts.map((c, i) => {
+            const linkPhone = c.phone.replace(/[^\d+]/g, '');
+            const whatsappUrl = `https://api.whatsapp.com/send?phone=${encodeURIComponent(linkPhone)}&text=${encodeURIComponent(emergencyMessage)}`;
+            const smsUrl = `sms:${linkPhone}?body=${encodeURIComponent(emergencyMessage)}`;
+            const telUrl = `tel:${linkPhone}`;
+
+            return (
+              <div key={`free-comms-${i}`} className="p-3 bg-dark-950/60 border border-gray-800/60 rounded-xl flex items-center justify-between gap-3">
+                <div className="truncate">
+                  <p className="font-bold text-gray-200 text-xs truncate">{c.name}</p>
+                  <p className="text-[10px] text-gray-500 font-mono mt-0.5">{c.phone}</p>
+                </div>
+                
+                <div className="flex gap-2 shrink-0">
+                  {/* Call Icon Button */}
+                  <a
+                    href={telUrl}
+                    className="p-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 rounded-lg text-emerald-400 transition"
+                    title="Call Guardian"
+                  >
+                    <Phone className="w-4 h-4" />
+                  </a>
+
+                  {/* SMS Icon Button */}
+                  <a
+                    href={smsUrl}
+                    className="p-1.5 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 rounded-lg text-blue-400 transition"
+                    title="Prefilled Direct SMS"
+                  >
+                    <MessageSquare className="w-4 h-4" />
+                  </a>
+
+                  {/* WhatsApp Icon Button */}
+                  <a
+                    href={whatsappUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-1.5 bg-green-500/10 hover:bg-green-500/20 border border-green-500/20 rounded-lg text-green-400 transition"
+                    title="Prefilled WhatsApp alert"
+                  >
+                    <MessageCircle className="w-4 h-4" />
+                  </a>
+                </div>
+              </div>
+            );
+          })}
+
+          {contacts.length === 0 && (
+            <p className="text-[11px] text-gray-500 text-center font-light">
+              Add trusted contacts in settings to use free native alert shortcuts.
+            </p>
+          )}
+
+          {contacts.length > 0 && (
+            <button
+              onClick={() => {
+                const c = contacts[0];
+                const linkPhone = c.phone.replace(/[^\d+]/g, '');
+                const whatsappUrl = `https://api.whatsapp.com/send?phone=${encodeURIComponent(linkPhone)}&text=${encodeURIComponent(emergencyMessage)}`;
+                window.open(whatsappUrl, '_blank');
+              }}
+              className="w-full py-2.5 bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white font-bold rounded-xl text-[11px] flex items-center justify-center gap-2 shadow-lg shadow-green-950/20 transition duration-150 mt-1"
+            >
+              <MessageCircle className="w-3.5 h-3.5" />
+              Send Free WhatsApp to Primary Contact
+            </button>
+          )}
         </div>
       </div>
 
