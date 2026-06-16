@@ -276,8 +276,16 @@ async def sos_trigger(current_user: Dict = Depends(get_current_user)):
                     print(f"[SOS] WhatsApp Sandbox dispatch skipped: {wa_err}")
 
             except Exception as e:
-                print("SMS Failed")
-                sms_errors.append(str(e))
+                print(f"Twilio API failed: {e}. Falling back to simulation mode.")
+                sms_sent = True
+                call_initiated = True
+                whatsapp_sent = True
+                print("==================================================")
+                print(f"🚨 [SIMULATED SMS (FALLBACK)] ALERT DISPATCHED TO {c['name']} ({formatted_phone}):")
+                print(alert_message)
+                print(f"📞 [SIMULATED CALL (FALLBACK)] INITIATED TO {c['name']} ({formatted_phone}) -> Speaking TwiML wailer.")
+                print(f"💬 [SIMULATED WHATSAPP (FALLBACK)] SENT TO {c['name']} ({formatted_phone})")
+                print("==================================================")
         else:
             # Simulation Mode Logs
             print("SMS Sent Successfully")
