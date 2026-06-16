@@ -11,8 +11,9 @@ const getApiBase = () => {
     return `${cleanUrl}/api/v1`;
   }
   // Detect if running inside a mobile WebView context (Capacitor)
-  const isWebView = window.location.hostname === 'localhost' || window.location.protocol.startsWith('capacitor:');
-  if (isWebView) {
+  const isCapacitor = (window as any).Capacitor !== undefined || window.location.protocol.startsWith('capacitor:');
+  const isAndroidEmulator = isCapacitor && window.location.hostname === 'localhost';
+  if (isAndroidEmulator) {
     return 'http://10.0.2.2:8000/api/v1'; // Default Android emulator loopback
   }
   return `http://${window.location.hostname}:8000/api/v1`;
