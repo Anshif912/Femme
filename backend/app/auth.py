@@ -54,16 +54,14 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
 def generate_otp() -> str:
     return "".join(random.choices("0123456789", k=6))
 
-def send_sms_otp(phone: str, otp: str) -> bool:
-    message_text = f"[FEMME] Your verification OTP is: {otp}. Valid for 10 minutes."
-    
+def send_sms(phone: str, message_text: str) -> bool:
     if settings.SMS_PROVIDER == "twilio" and settings.TWILIO_ACCOUNT_SID:
         try:
             from twilio.rest import Client
             client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
             client.messages.create(
                 body=message_text,
-                from_=settings.TWILIO_PHONE_NUMBER,
+                from_=settings.TWILIO_FROM_NUMBER or settings.TWILIO_PHONE_NUMBER,
                 to=phone
             )
             print(f"Sent Twilio SMS to {phone}")
@@ -73,9 +71,14 @@ def send_sms_otp(phone: str, otp: str) -> bool:
             
     # Simulation mode
     print("==================================================")
-    print(f"SIMULATED SMS OTP to {phone}: {message_text}")
+    print(f"🚨 [SIMULATED SMS] ALERT DISPATCHED TO {phone}:")
+    print(message_text)
     print("==================================================")
     return True
+
+def send_sms_otp(phone: str, otp: str) -> bool:
+    message_text = f"[FEMME] Your verification OTP is: {otp}. Valid for 10 minutes."
+    return send_sms(phone, message_text)
 
 def send_twilio_verify_otp(phone: str) -> bool:
     if settings.SMS_PROVIDER == "twilio" and settings.TWILIO_ACCOUNT_SID and settings.TWILIO_VERIFY_SERVICE_SID:

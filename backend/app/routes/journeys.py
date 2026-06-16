@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from typing import List, Dict, Optional, Any
 from datetime import datetime
-from app.auth import get_current_user
+from app.auth import get_current_user, send_sms
 from app.database import DBService
 from app.utils.routing import fetch_route, check_route_deviation, score_safety, geocode_address
 from app.utils.phone_validation import format_to_e164
@@ -64,11 +64,13 @@ async def start_journey(journey_in: JourneyCreate, current_user: Dict = Depends(
     
     new_journey = DBService.create_journey(user_phone, journey_data)
     
-    # Send Start Notification to Trusted Contacts (Simulated message)
+    # Send Start Notification to Trusted Contacts (Real SMS if Twilio is enabled)
     contacts = DBService.get_contacts(user_phone)
     for c in contacts:
         msg = f"[FEMME Safeguard] {current_user.get('name', 'User')} has started a cab journey in {new_journey['provider'].upper()} (Plate: {new_journey['cab_number']}) from {new_journey['pickup_address']} to {new_journey['dest_address']}. Track live location here: http://femme-safety.app/track/{new_journey['id']}"
-        print(f"SIMULATED JOURNEY-START NOTIFICATION to {c['name']} ({c['phone']}): {msg}")
+        raw_phone = c.get("phone", "")
+        formatted_phone = format_to_e164(raw_phone) or raw_phone
+        send_sms(formatted_phone, msg)
 
     return new_journey
 
@@ -143,11 +145,13 @@ async def complete_journey(current_user: Dict = Depends(get_current_user)):
     }
     updated_journey = DBService.update_journey(journey["id"], updates)
 
-    # Notify contacts of safe arrival
+    # Notify contacts of safe arrival (Real SMS if Twilio is enabled)
     contacts = DBService.get_contacts(user_phone)
     for c in contacts:
         msg = f"[FEMME Safeguard] {current_user.get('name', 'User')} has arrived safely at {journey['dest_address']}. Monitoring completed."
-        print(f"SIMULATED SAFE-ARRIVAL NOTIFICATION to {c['name']} ({c['phone']}): {msg}")
+        raw_phone = c.get("phone", "")
+        formatted_phone = format_to_e164(raw_phone) or raw_phone
+        send_sms(formatted_phone, msg)
 
     return updated_journey
 
