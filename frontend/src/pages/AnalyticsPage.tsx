@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Audio } from 'expo-av';
 import api from '../utils/api';
 import { BarChart2, Shield, AlertTriangle, TrendingUp, Calendar, Clock } from 'lucide-react';
 

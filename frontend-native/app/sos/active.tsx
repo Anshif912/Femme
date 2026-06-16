@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Audio } from 'expo-av';
 import {
   StyleSheet,
   Text,
@@ -23,6 +24,7 @@ export default function SOSScreen() {
   const [blinkingState, setBlinkingState] = useState(false);
   const [contacts, setContacts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const soundRef = useRef<Audio.Sound | null>(null);
 
   const [steps, setSteps] = useState({
     emergencyActivated: false,
@@ -74,6 +76,34 @@ export default function SOSScreen() {
     }, 400);
     return () => clearInterval(flashTimer);
   }, []);
+  useEffect(() => {
+  const loadSiren = async () => {
+    try {
+      await Audio.setAudioModeAsync({
+        playsInSilentModeIOS: true,
+      });
+
+      const { sound } = await Audio.Sound.createAsync(
+        require('../../assets/siren.mp3'),
+        {
+          shouldPlay: true,
+          isLooping: true,
+          volume: 1.0,
+        }
+      );
+
+      soundRef.current = sound;
+    } catch (err) {
+      console.log('Siren error:', err);
+    }
+  };
+
+  loadSiren();
+
+  return () => {
+    soundRef.current?.unloadAsync();
+  };
+}, []);
 
   const handleDeescalate = () => {
     Alert.alert(
@@ -184,7 +214,17 @@ export default function SOSScreen() {
             styles.sirenBtn,
             sirenPlaying ? styles.sirenActive : styles.sirenSilenced,
           ]}
-          onPress={() => setSirenPlaying(!sirenPlaying)}
+          onPress={async () => {
+  if (!soundRef.current) return;
+
+  if (sirenPlaying) {
+    await soundRef.current.pauseAsync();
+  } else {
+    await soundRef.current.playAsync();
+  }
+
+  setSirenPlaying(!sirenPlaying);
+}}
         >
           {sirenPlaying ? (
             <>
@@ -244,6 +284,8 @@ export default function SOSScreen() {
         {/* De-escalate button */}
         <TouchableOpacity style={styles.deescalateBtn} onPress={handleDeescalate}>
           <Text style={styles.deescalateText}>De-escalate & Set Safe Status</Text>
+          await soundRef.current?.stopAsync();
+          await soundRef.current?.unloadAsync();
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
