@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Audio } from 'expo-av';
 import api from '../utils/api';
 import { FileWarning, Search, ThumbsDown, Star, AlertOctagon, CheckCircle2, ShieldAlert } from 'lucide-react';
 
