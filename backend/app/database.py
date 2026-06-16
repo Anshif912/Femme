@@ -162,6 +162,20 @@ def init_sqlite_db():
     )
     """)
     
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS emergency_alerts (
+        id TEXT PRIMARY KEY,
+        journey_id TEXT,
+        contact_name TEXT,
+        contact_phone TEXT,
+        sms_status TEXT,
+        call_status TEXT,
+        acknowledged INTEGER DEFAULT 0,
+        timestamp TEXT,
+        FOREIGN KEY(journey_id) REFERENCES journeys(id)
+    )
+    """)
+    
     conn.commit()
     conn.close()
     print("Local SQLite Database schemas initialized.")
@@ -672,3 +686,55 @@ class DBService:
             return True
         conn.close()
         return False
+
+    @staticmethod
+    def create_emergency_alert(journey_id: str, contact_name: str, contact_phone: str, sms_status: str, call_status: str) -> Dict:
+        aid = hashlib.md5(f"{journey_id}_{contact_phone}_{time.time()}".encode()).hexdigest()
+        now = datetime.utcnow().isoformat()
+        alert_data = {
+            "id": aid,
+            "journey_id": journey_id,
+            "contact_name": contact_name,
+            "contact_phone": contact_phone,
+            "sms_status": sms_status,
+            "call_status": call_status,
+            "acknowledged": 0,
+            "timestamp": now
+        }
+        
+        conn = get_sqlite_conn()
+        conn.execute(
+            """
+            INSERT INTO emergency_alerts (
+                id, journey_id, contact_name, contact_phone, sms_status, call_status, acknowledged, timestamp
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (aid, journey_id, contact_name, contact_phone, sms_status, call_status, 0, now)
+        )
+        conn.commit()
+        conn.close()
+        return alert_data
+
+    @staticmethod
+    def get_emergency_alerts(journey_id: str) -> List[Dict]:
+        conn = get_sqlite_conn()
+        rows = conn.execute("SELECT * FROM emergency_alerts WHERE journey_id = ?", (journey_id,)).fetchall()
+        conn.close()
+        return [dict(row) for row in rows]
+
+    @staticmethod
+    def update_emergency_alert(alert_id: str, updates: Dict) -> Optional[Dict]:
+        conn = get_sqlite_conn()
+        set_clauses = []
+        params = []
+        for k, v in updates.items():
+            set_clauses.append(f"{k} = ?")
+            params.append(v)
+        params.append(alert_id)
+        
+        conn.execute(f"UPDATE emergency_alerts SET {', '.join(set_clauses)} WHERE id = ?", params)
+        conn.commit()
+        
+        row = conn.execute("SELECT * FROM emergency_alerts WHERE id = ?", (alert_id,)).fetchone()
+        conn.close()
+        return dict(row) if row else None

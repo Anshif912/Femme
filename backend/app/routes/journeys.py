@@ -232,55 +232,61 @@ async def trigger_sos(current_user: Dict = Depends(get_current_user)):
         f"User: {user_name}\n\n"
         f"Location:\n"
         f"https://maps.google.com/?q={lat},{lng}\n\n"
-        f"Journey:\n"
-        f"{origin} → {destination}\n\n"
         f"Cab:\n"
         f"{cab_number}\n\n"
-        f"Time:\n"
+        f"Timestamp:\n"
         f"{timestamp_str}\n\n"
-        f"Please contact immediately."
+        f"Possible emergency detected."
     )
 
-    print("Preparing SMS")
+    print("Initializing Notification Provider")
+    from app.utils.notification_providers import get_configured_provider
+    provider = get_configured_provider()
     
     sms_sent = False
-    sms_errors = []
+    sms_status = "Bypassed"
 
     for c in contacts:
         raw_phone = c.get("phone", "")
-        formatted_phone = format_to_e164(raw_phone)
-        if not formatted_phone:
-            invalid_msg = f"Invalid phone number detected: {raw_phone}"
-            print(invalid_msg)
-            sms_errors.append(f"Invalid phone number for {c['name']}")
-            continue
-
-        print("Sending SMS")
-        from app.config import settings
-        if settings.SMS_PROVIDER == "twilio" and settings.TWILIO_ACCOUNT_SID:
-            try:
-                from twilio.rest import Client
-                client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
-                
-                client.messages.create(
-                    body=alert_message,
-                    from_=settings.TWILIO_FROM_NUMBER,
-                    to=formatted_phone
-                )
-                print("SMS Sent Successfully")
+        formatted_phone = format_to_e164(raw_phone) or raw_phone
+        
+        speech_text = f"Emergency alert from FEMME. {user_name} may be in danger. Open the location link sent by SMS immediately."
+        
+        sms_delivery = 'failed'
+        call_delivery = 'failed'
+        
+        if provider:
+            # Send SMS
+            sms_ok = provider.send_sms(formatted_phone, alert_message)
+            if sms_ok:
+                sms_delivery = 'delivered'
                 sms_sent = True
-            except Exception as e:
-                print("SMS Failed")
-                sms_errors.append(str(e))
+            
+            # Place Call
+            call_ok = provider.make_voice_call(formatted_phone, speech_text)
+            if call_ok:
+                call_delivery = 'connected'
         else:
-            sms_sent = False
+            print(f"[SOS] Warning: No production NotificationProvider configured for {c['name']} ({formatted_phone})")
+
+        # Save actual status in SQLite DB
+        DBService.create_emergency_alert(
+            journey_id=journey["id"],
+            contact_name=c["name"],
+            contact_phone=formatted_phone,
+            sms_status=sms_delivery,
+            call_status=call_delivery
+        )
 
     # Log overall status
     if len(contacts) == 0:
-        sms_status = "No trusted contacts saved."
+        sms_status = "SMS Failed: No trusted contacts saved."
+        print(sms_status)
+    elif provider:
+        sms_status = "SMS Dispatched via active NotificationProvider"
         print(sms_status)
     else:
-        sms_status = "Bypassed backend Twilio dispatch (handled natively on Android device)"
+        sms_status = "No provider keys set. Local simulation bypass active."
         print(sms_status)
 
     # Return structure matching expected journey
@@ -305,3 +311,24 @@ async def check_route_safety(route_coords: List[List[float]], current_user: Dict
 @router.get("/history", response_model=List[Dict])
 async def get_history(current_user: Dict = Depends(get_current_user)):
     return DBService.get_user_journeys(current_user["phone"])
+
+@router.get("/track/{journey_id}", response_model=Dict)
+async def get_public_journey_track(journey_id: str):
+    journey = DBService.get_journey(journey_id)
+    if not journey:
+        raise HTTPException(status_code=404, detail="Journey not found")
+    return {
+        "id": journey["id"],
+        "cab_number": journey["cab_number"],
+        "provider": journey["provider"],
+        "pickup_address": journey["pickup_address"],
+        "dest_address": journey["dest_address"],
+        "pickup_lat": journey["pickup_lat"],
+        "pickup_lng": journey["pickup_lng"],
+        "dest_lat": journey["dest_lat"],
+        "dest_lng": journey["dest_lng"],
+        "current_lat": journey["current_lat"],
+        "current_lng": journey["current_lng"],
+        "status": journey["status"],
+        "expected_route": journey.get("expected_route", [])
+    }

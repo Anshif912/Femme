@@ -194,6 +194,16 @@ export const api = {
 
   // Notification simulator trigger
   triggerNotificationSim: (text: string) => 
-    request('/simulation/trigger-notification', { method: 'POST', body: JSON.stringify({ text }) })
+    request('/simulation/trigger-notification', { method: 'POST', body: JSON.stringify({ text }) }),
+
+  // SOS status and acknowledgment
+  getSosStatus: (journeyId: string) => 
+    request(`/sos/status/${journeyId}`),
+    
+  acknowledgeSos: (journeyId: string, phone?: string) => 
+    request(`/sos/acknowledge/${journeyId}${phone ? `?phone=${phone}` : ''}`, { method: 'POST' }),
+
+  getPublicJourneyTrack: (journeyId: string) =>
+    request(`/journeys/track/${journeyId}`)
 };
 export default api;

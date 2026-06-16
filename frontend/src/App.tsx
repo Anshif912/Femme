@@ -128,6 +128,14 @@ export const App: React.FC = () => {
           } 
         />
         <Route 
+          path="/track/:journeyId" 
+          element={
+            <Layout>
+              <RouteViewPage />
+            </Layout>
+          } 
+        />
+        <Route 
           path="/anomaly-center" 
           element={
             <ProtectedRoute>

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
 import api from '../utils/api';
-import { ShieldAlert, Volume2, VolumeX, Eye, Phone, MapPin, CheckCircle2, ShieldCheck, Loader2 } from 'lucide-react';
+import { ShieldAlert, Volume2, VolumeX, Phone, CheckCircle2, Loader2, ShieldAlert as AlertIcon, Eye } from 'lucide-react';
 
 export const SOSCenterPage: React.FC = () => {
   const navigate = useNavigate();
@@ -11,6 +11,7 @@ export const SOSCenterPage: React.FC = () => {
   const [sirenPlaying, setSirenPlaying] = useState(true);
   const [blinkingState, setBlinkingState] = useState(false);
   const [contacts, setContacts] = useState<any[]>([]);
+  const [alertStatuses, setAlertStatuses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   
   const [steps, setSteps] = useState({
@@ -27,7 +28,7 @@ export const SOSCenterPage: React.FC = () => {
   const oscillatorRef = useRef<OscillatorNode | null>(null);
   const gainRef = useRef<GainNode | null>(null);
 
-  // Auto trigger SOS on page enter (One-tap action completed!)
+  // 1. Auto trigger SOS on page enter (One-tap action completed!)
   useEffect(() => {
     const triggerEmergencyProtocol = async () => {
       setLoading(true);
@@ -41,14 +42,6 @@ export const SOSCenterPage: React.FC = () => {
         } catch (e) {
           console.error("Failed to load contacts for payload:", e);
         }
-
-        const payload = {
-          user: user,
-          journey: activeJourney,
-          location: { latitude: currentLat, longitude: currentLng },
-          trustedContacts: cont
-        };
-        console.log("SOS request payload", payload);
 
         const res = await api.triggerSos();
         console.log("SOS response", res);
@@ -77,11 +70,39 @@ export const SOSCenterPage: React.FC = () => {
     triggerEmergencyProtocol();
   }, []);
 
-  // Web Audio Programmatic Siren Synthesizer (No static file dependencies!)
+  // 2. Poll alert statuses from NotificationProvider database logs every 3s
+  useEffect(() => {
+    if (!activeJourney?.id) return;
+
+    const fetchStatuses = async () => {
+      try {
+        const statuses = await api.getSosStatus(activeJourney.id);
+        setAlertStatuses(statuses);
+        
+        // Update summary steps based on actual provider results
+        const anySmsSuccess = statuses.some((s: any) => s.sms_status === 'delivered');
+        const anyCallSuccess = statuses.some((s: any) => s.call_status === 'connected');
+        
+        setSteps((prev) => ({
+          ...prev,
+          smsSent: anySmsSuccess,
+          smsStatus: anySmsSuccess ? 'SMS Delivered' : 'SMS Failed',
+          callInitiated: anyCallSuccess
+        }));
+      } catch (err) {
+        console.error("Failed to query alert statuses:", err);
+      }
+    };
+
+    fetchStatuses();
+    const interval = setInterval(fetchStatuses, 3000);
+    return () => clearInterval(interval);
+  }, [activeJourney]);
+
+  // 3. Web Audio Programmatic Siren Synthesizer (No static file dependencies!)
   useEffect(() => {
     if (sirenPlaying) {
       try {
-        // Initialize AudioContext
         const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
         const ctx = new AudioContextClass();
         audioCtxRef.current = ctx;
@@ -91,7 +112,6 @@ export const SOSCenterPage: React.FC = () => {
 
         osc.type = 'sawtooth';
         
-        // Siren frequency modulation (wailing sound)
         osc.frequency.setValueAtTime(440, ctx.currentTime);
         osc.frequency.linearRampToValueAtTime(880, ctx.currentTime + 0.5);
         osc.frequency.linearRampToValueAtTime(440, ctx.currentTime + 1.0);
@@ -99,7 +119,6 @@ export const SOSCenterPage: React.FC = () => {
         osc.connect(gain);
         gain.connect(ctx.destination);
         
-        // Loop the frequency sweep
         let sweepInterval = setInterval(() => {
           if (ctx.state === 'suspended') return;
           osc.frequency.setValueAtTime(440, ctx.currentTime);
@@ -107,7 +126,7 @@ export const SOSCenterPage: React.FC = () => {
           osc.frequency.linearRampToValueAtTime(440, ctx.currentTime + 1.0);
         }, 1000);
 
-        gain.gain.setValueAtTime(0.15, ctx.currentTime); // moderate volume
+        gain.gain.setValueAtTime(0.15, ctx.currentTime);
 
         osc.start();
         oscillatorRef.current = osc;
@@ -124,7 +143,7 @@ export const SOSCenterPage: React.FC = () => {
     }
   }, [sirenPlaying]);
 
-  // Flash Screen visual effect timer
+  // 4. Flash Screen visual effect timer
   useEffect(() => {
     const flashTimer = setInterval(() => {
       setBlinkingState((prev) => !prev);
@@ -153,6 +172,9 @@ export const SOSCenterPage: React.FC = () => {
     }
   };
 
+  // Status mapping checkers
+  const hasAcknowledged = alertStatuses.some((a: any) => a.acknowledged === 1);
+
   return (
     <div className={`min-h-[80vh] rounded-3xl p-6 transition-all duration-300 ${
       blinkingState ? 'bg-red-950/40 border-2 border-red-500/80 glow-rose' : 'bg-dark-900 border-2 border-gray-800'
@@ -177,6 +199,7 @@ export const SOSCenterPage: React.FC = () => {
         </h4>
         
         <div className="space-y-2.5 text-xs font-semibold">
+          {/* Emergency state lock on server */}
           <div className="flex items-center gap-2.5">
             {steps.emergencyActivated ? (
               <span className="text-emerald-400 font-bold">✓</span>
@@ -186,6 +209,7 @@ export const SOSCenterPage: React.FC = () => {
             <span className={steps.emergencyActivated ? 'text-gray-300' : 'text-gray-500'}>Emergency Activated</span>
           </div>
 
+          {/* SMS dispatch status from provider logs */}
           <div className="flex items-center gap-2.5">
             {steps.smsSent ? (
               <span className="text-emerald-400 font-bold">✓</span>
@@ -193,19 +217,21 @@ export const SOSCenterPage: React.FC = () => {
               <Loader2 className="w-3.5 h-3.5 text-red-500 animate-spin" />
             )}
             <span className={steps.smsSent ? 'text-gray-300' : 'text-gray-500'}>
-              {steps.smsStatus || 'SMS Sent'}
+              {steps.smsStatus || 'SMS Dispatching'}
             </span>
           </div>
 
+          {/* Call connection status from provider logs */}
           <div className="flex items-center gap-2.5">
             {steps.callInitiated ? (
               <span className="text-emerald-400 font-bold">✓</span>
             ) : (
               <Loader2 className="w-3.5 h-3.5 text-red-500 animate-spin" />
             )}
-            <span className={steps.callInitiated ? 'text-gray-300' : 'text-gray-500'}>Call Initiated</span>
+            <span className={steps.callInitiated ? 'text-gray-300' : 'text-gray-500'}>Call Connected</span>
           </div>
 
+          {/* GPS streaming status */}
           <div className="flex items-center gap-2.5">
             {steps.liveTrackingActive ? (
               <span className="text-emerald-400 font-bold">✓</span>
@@ -215,6 +241,7 @@ export const SOSCenterPage: React.FC = () => {
             <span className={steps.liveTrackingActive ? 'text-gray-300' : 'text-gray-500'}>Live Tracking Active</span>
           </div>
 
+          {/* Evidence lock status */}
           <div className="flex items-center gap-2.5">
             {steps.evidenceLocked ? (
               <span className="text-emerald-400 font-bold">✓</span>
@@ -222,6 +249,18 @@ export const SOSCenterPage: React.FC = () => {
               <Loader2 className="w-3.5 h-3.5 text-red-500 animate-spin" />
             )}
             <span className={steps.evidenceLocked ? 'text-gray-300' : 'text-gray-500'}>Evidence Locked</span>
+          </div>
+
+          {/* Guardian acknowledgement check status */}
+          <div className="flex items-center gap-2.5">
+            {hasAcknowledged ? (
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+            ) : (
+              <Loader2 className="w-3.5 h-3.5 text-amber-500 animate-spin" />
+            )}
+            <span className={hasAcknowledged ? 'text-emerald-400 font-bold' : 'text-gray-500'}>
+              {hasAcknowledged ? 'Guardian Acknowledged' : 'Waiting for Guardian Acknowledgment'}
+            </span>
           </div>
         </div>
 
@@ -255,7 +294,7 @@ export const SOSCenterPage: React.FC = () => {
         </button>
       </div>
 
-      {/* Real-time coordinates log overlay */}
+      {/* Coordinates stream */}
       <div className="p-4 bg-dark-950/80 border border-gray-800 rounded-xl max-w-sm w-full text-xs text-gray-400 leading-normal">
         <div className="flex items-center justify-between font-bold text-gray-300 mb-2">
           <span>Active Coordinate Stream:</span>
@@ -268,21 +307,52 @@ export const SOSCenterPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Priority emergency contacts dispatcher log */}
+      {/* Notified Guardians with production delivery statuses */}
       <div className="max-w-md w-full text-left space-y-3">
         <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest text-center">Notified Guardians</h4>
         
-        {contacts.map((c, i) => (
-          <div key={i} className="p-3 bg-dark-950/50 border border-gray-800 rounded-xl flex items-center justify-between text-xs">
-            <div>
-              <p className="font-bold text-white">{c.name}</p>
-              <p className="text-[10px] text-gray-500 font-mono">{c.phone}</p>
+        {contacts.map((c, i) => {
+          const alert = alertStatuses.find((a: any) => a.contact_phone === c.phone || a.contact_phone.includes(c.phone));
+          const smsStatus = alert?.sms_status || 'pending';
+          const callStatus = alert?.call_status || 'pending';
+          const ack = alert?.acknowledged === 1;
+
+          return (
+            <div key={i} className="p-4 bg-dark-950/50 border border-gray-800 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+              <div>
+                <p className="font-bold text-white flex items-center gap-1.5">
+                  {c.name}
+                </p>
+                <p className="text-[10px] text-gray-500 font-mono mt-0.5">{c.phone}</p>
+              </div>
+              
+              <div className="flex flex-wrap gap-1.5">
+                {/* SMS Status Badge */}
+                <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase ${
+                  smsStatus === 'delivered' ? 'bg-emerald-950 text-emerald-400' :
+                  smsStatus === 'failed' ? 'bg-red-950 text-red-400' : 'bg-amber-950 text-amber-400'
+                }`}>
+                  {smsStatus === 'delivered' ? 'SMS Delivered' : smsStatus === 'failed' ? 'SMS Failed' : 'SMS Pending'}
+                </span>
+
+                {/* Call Status Badge */}
+                <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase ${
+                  callStatus === 'connected' ? 'bg-emerald-950 text-emerald-400' :
+                  callStatus === 'failed' ? 'bg-red-950 text-red-400' : 'bg-amber-950 text-amber-400'
+                }`}>
+                  {callStatus === 'connected' ? 'Call Connected' : callStatus === 'failed' ? 'Call Failed' : 'Call Pending'}
+                </span>
+
+                {/* Acknowledgment Badge */}
+                <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase ${
+                  ack ? 'bg-emerald-950 text-emerald-400' : 'bg-amber-950/20 text-gray-500'
+                }`}>
+                  {ack ? 'Guardian Acknowledged' : 'Awaiting Acknowledgment'}
+                </span>
+              </div>
             </div>
-            <a href={`tel:${c.phone}`} className="p-2 bg-rose-500/10 border border-rose-500/20 text-rose-400 hover:text-white rounded-lg transition">
-              <Phone className="w-3.5 h-3.5" />
-            </a>
-          </div>
-        ))}
+          );
+        })}
 
         {contacts.length === 0 && (
           <p className="text-xs text-gray-500 text-center font-light">
@@ -291,7 +361,7 @@ export const SOSCenterPage: React.FC = () => {
         )}
       </div>
 
-      {/* Resolution trigger button */}
+      {/* Resolution button */}
       <button
         onClick={handleDeescalate}
         className="px-8 py-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-2xl transition duration-150 shadow-lg text-sm"

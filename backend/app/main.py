@@ -204,93 +204,65 @@ async def sos_trigger(current_user: Dict = Depends(get_current_user)):
         f"User: {user_name}\n\n"
         f"Location:\n"
         f"https://maps.google.com/?q={lat},{lng}\n\n"
-        f"Journey:\n"
-        f"{origin} → {destination}\n\n"
         f"Cab:\n"
         f"{cab_number}\n\n"
-        f"Time:\n"
+        f"Timestamp:\n"
         f"{timestamp_str}\n\n"
-        f"Please contact immediately."
+        f"Possible emergency detected."
     )
 
-    print("Preparing SMS")
+    print("Initializing Notification Provider")
+    from app.utils.notification_providers import get_configured_provider
+    provider = get_configured_provider()
     
     sms_sent = False
     call_initiated = False
-    whatsapp_sent = False
-    sms_errors = []
+    sms_status = "Bypassed"
 
-    # Send multi-channel alerts to emergency contacts (Voice calls are processed sequentially)
+    # Send multi-channel alerts to emergency contacts using NotificationProvider abstraction
     for c in contacts:
         raw_phone = c.get("phone", "")
-        formatted_phone = format_to_e164(raw_phone)
-        if not formatted_phone:
-            invalid_msg = f"Invalid phone number detected: {raw_phone}"
-            print(invalid_msg)
-            sms_errors.append(f"Invalid phone number for {c['name']}: {raw_phone}")
-            continue
-
-        print("Sending SMS")
-        if settings.SMS_PROVIDER == "twilio" and settings.TWILIO_ACCOUNT_SID:
-            try:
-                from twilio.rest import Client
-                client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
-                
-                # 1. SMS Dispatch (no confirmation wait)
-                client.messages.create(
-                    body=alert_message,
-                    from_=settings.TWILIO_FROM_NUMBER,
-                    to=formatted_phone
-                )
-                print("SMS Sent Successfully")
+        formatted_phone = format_to_e164(raw_phone) or raw_phone
+        
+        # Build text-to-speech string
+        speech_text = f"Emergency alert from FEMME. {user_name} may be in danger. Open the location link sent by SMS immediately."
+        
+        sms_delivery = 'failed'
+        call_delivery = 'failed'
+        
+        if provider:
+            # Dispatch real SMS
+            sms_ok = provider.send_sms(formatted_phone, alert_message)
+            if sms_ok:
+                sms_delivery = 'delivered'
                 sms_sent = True
-                
-                # 2. Voice Call Dispatch with custom message sequentially
-                try:
-                    twiml_content = (
-                        "<Response>"
-                        "<Say voice='alice'>Emergency alert from FEMME. The user may be in danger. "
-                        "Please check the SMS location link immediately.</Say>"
-                        "</Response>"
-                    )
-                    client.calls.create(
-                        to=formatted_phone,
-                        from_=settings.TWILIO_FROM_NUMBER,
-                        twiml=twiml_content
-                    )
-                    call_initiated = True
-                    print(f"[SOS] Initiated automated Twilio Voice Call to {c['name']} ({formatted_phone})")
-                except Exception as call_err:
-                    print(f"[SOS] Twilio call failed: {call_err}")
-                
-                # 3. WhatsApp Dispatch (using Sandbox numbers)
-                try:
-                    client.messages.create(
-                        body=alert_message,
-                        from_=f"whatsapp:{settings.TWILIO_FROM_NUMBER}",
-                        to=f"whatsapp:{formatted_phone}"
-                    )
-                    whatsapp_sent = True
-                    print(f"[SOS] Sent WhatsApp template text to {formatted_phone}")
-                except Exception as wa_err:
-                    print(f"[SOS] WhatsApp Sandbox dispatch skipped: {wa_err}")
-
-            except Exception as e:
-                print(f"Twilio API failed: {e}. Bypassed backend Twilio dispatch (handled natively on Android device).")
-                sms_sent = False
-                call_initiated = False
-                whatsapp_sent = False
+            
+            # Dispatch real Voice Call
+            call_ok = provider.make_voice_call(formatted_phone, speech_text)
+            if call_ok:
+                call_delivery = 'connected'
+                call_initiated = True
         else:
-            sms_sent = False
-            call_initiated = False
-            whatsapp_sent = False
+            print(f"[SOS] Warning: No production NotificationProvider configured for {c['name']} ({formatted_phone})")
+
+        # Save actual statuses in SQLite DB
+        DBService.create_emergency_alert(
+            journey_id=journey["id"],
+            contact_name=c["name"],
+            contact_phone=formatted_phone,
+            sms_status=sms_delivery,
+            call_status=call_delivery
+        )
 
     # Log overall status
     if len(contacts) == 0:
-        sms_status = "SMS Bypassed: No trusted contacts saved."
+        sms_status = "SMS Failed: No trusted contacts saved."
+        print(sms_status)
+    elif provider:
+        sms_status = "SMS Dispatched via active NotificationProvider"
         print(sms_status)
     else:
-        sms_status = "Bypassed backend Twilio dispatch (handled natively on Android device)"
+        sms_status = "No provider keys set. Local simulation bypass active."
         print(sms_status)
 
     # 9. Create FIR draft entry (pre-compiles ReportLab PDF template)
@@ -370,6 +342,25 @@ async def test_sms(recipient_phone: str):
             "Delivery Status": f"SMS Failed: {e}"
         }
 
+
+@app.get(f"{settings.API_V1_STR}/sos/status/{{journey_id}}", response_model=List[Dict])
+async def get_sos_status(journey_id: str, current_user: Dict = Depends(get_current_user)):
+    journey = DBService.get_journey(journey_id)
+    if not journey:
+        raise HTTPException(status_code=404, detail="Journey not found")
+    if journey["user_phone"] != current_user["phone"]:
+        raise HTTPException(status_code=403, detail="Not authorized to inspect status")
+    return DBService.get_emergency_alerts(journey_id)
+
+@app.post(f"{settings.API_V1_STR}/sos/acknowledge/{{journey_id}}")
+async def sos_acknowledge(journey_id: str, phone: Optional[str] = None):
+    alerts = DBService.get_emergency_alerts(journey_id)
+    updated = []
+    for a in alerts:
+        if not phone or a["contact_phone"] == phone:
+            DBService.update_emergency_alert(a["id"], {"acknowledged": 1})
+            updated.append(a["id"])
+    return {"status": "success", "acknowledged_ids": updated}
 
 # Include Feature Routers
 app.include_router(journeys.router, prefix=settings.API_V1_STR)
