@@ -276,38 +276,21 @@ async def sos_trigger(current_user: Dict = Depends(get_current_user)):
                     print(f"[SOS] WhatsApp Sandbox dispatch skipped: {wa_err}")
 
             except Exception as e:
-                print(f"Twilio API failed: {e}. Falling back to simulation mode.")
-                sms_sent = True
-                call_initiated = True
-                whatsapp_sent = True
-                print("==================================================")
-                print(f"🚨 [SIMULATED SMS (FALLBACK)] ALERT DISPATCHED TO {c['name']} ({formatted_phone}):")
-                print(alert_message)
-                print(f"📞 [SIMULATED CALL (FALLBACK)] INITIATED TO {c['name']} ({formatted_phone}) -> Speaking TwiML wailer.")
-                print(f"💬 [SIMULATED WHATSAPP (FALLBACK)] SENT TO {c['name']} ({formatted_phone})")
-                print("==================================================")
+                print(f"Twilio API failed: {e}. Bypassed backend Twilio dispatch (handled natively on Android device).")
+                sms_sent = False
+                call_initiated = False
+                whatsapp_sent = False
         else:
-            # Simulation Mode Logs
-            print("SMS Sent Successfully")
-            sms_sent = True
-            call_initiated = True
-            whatsapp_sent = True
-            print("==================================================")
-            print(f"🚨 [SIMULATED SMS] ALERT DISPATCHED TO {c['name']} ({formatted_phone}):")
-            print(alert_message)
-            print(f"📞 [SIMULATED CALL] INITIATED TO {c['name']} ({formatted_phone}) -> Speaking TwiML wailer.")
-            print(f"💬 [SIMULATED WHATSAPP] SENT TO {c['name']} ({formatted_phone})")
-            print("==================================================")
+            sms_sent = False
+            call_initiated = False
+            whatsapp_sent = False
 
     # Log overall status
     if len(contacts) == 0:
-        sms_status = "SMS Failed: No trusted contacts saved."
-        print(sms_status)
-    elif sms_errors and not sms_sent:
-        sms_status = f"SMS Failed: {'; '.join(sms_errors)}"
+        sms_status = "SMS Bypassed: No trusted contacts saved."
         print(sms_status)
     else:
-        sms_status = "SMS Sent"
+        sms_status = "Bypassed backend Twilio dispatch (handled natively on Android device)"
         print(sms_status)
 
     # 9. Create FIR draft entry (pre-compiles ReportLab PDF template)

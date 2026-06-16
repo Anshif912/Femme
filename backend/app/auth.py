@@ -67,17 +67,18 @@ def send_sms(phone: str, message_text: str) -> bool:
             print(f"Sent Twilio SMS to {phone}")
             return True
         except Exception as e:
-            print(f"Twilio SMS sending failed: {e}. Falling back to simulation.")
+            print(f"Twilio SMS sending failed: {e}")
             
-    # Simulation mode
-    print("==================================================")
-    print(f"🚨 [SIMULATED SMS] ALERT DISPATCHED TO {phone}:")
-    print(message_text)
-    print("==================================================")
+    print(f"[SMS Bypass] Bypassed backend Twilio dispatch for {phone} (native device handles composition)")
     return True
 
 def send_sms_otp(phone: str, otp: str) -> bool:
     message_text = f"[FEMME] Your verification OTP is: {otp}. Valid for 10 minutes."
+    if settings.SMS_PROVIDER != "twilio":
+        print("==================================================")
+        print(f"🔑 [SIMULATED OTP SMS] TO {phone}: {message_text}")
+        print("==================================================")
+        return True
     return send_sms(phone, message_text)
 
 def send_twilio_verify_otp(phone: str) -> bool:

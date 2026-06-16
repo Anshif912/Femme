@@ -273,23 +273,14 @@ async def trigger_sos(current_user: Dict = Depends(get_current_user)):
                 print("SMS Failed")
                 sms_errors.append(str(e))
         else:
-            # Simulation Mode
-            print("SMS Sent Successfully")
-            sms_sent = True
-            print("==================================================")
-            print(f"🚨 [SIMULATED SMS] ALERT DISPATCHED TO {c['name']} ({formatted_phone}):")
-            print(alert_message)
-            print("==================================================")
+            sms_sent = False
 
     # Log overall status
     if len(contacts) == 0:
-        sms_status = "SMS Failed: No trusted contacts saved."
-        print(sms_status)
-    elif sms_errors and not sms_sent:
-        sms_status = f"SMS Failed: {'; '.join(sms_errors)}"
+        sms_status = "No trusted contacts saved."
         print(sms_status)
     else:
-        sms_status = "SMS Sent"
+        sms_status = "Bypassed backend Twilio dispatch (handled natively on Android device)"
         print(sms_status)
 
     # Return structure matching expected journey

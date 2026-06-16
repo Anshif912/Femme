@@ -8,13 +8,14 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
-  Linking,
   SafeAreaView,
+  AppState,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useStore } from '../../store/useStore';
 import { api } from '../../utils/api';
-import { ShieldAlert, Volume2, VolumeX, Phone, MapPin, Check } from 'lucide-react-native';
+import { ShieldAlert, Volume2, VolumeX, Phone, MessageSquare, Send, Check } from 'lucide-react-native';
+import { commsProvider, IEmergencyPayload } from '../../utils/CommunicationProvider';
 
 export default function SOSScreen() {
   const router = useRouter();
@@ -25,60 +26,113 @@ export default function SOSScreen() {
   const [contacts, setContacts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const soundRef = useRef<Audio.Sound | null>(null);
+  const appStateRef = useRef(AppState.currentState);
+
+  // Communication status tracking
+  const [commsState, setCommsState] = useState({
+    smsMethod: 'Not Dispatched' as 'Not Dispatched' | 'direct' | 'composer' | 'failed',
+    callInitiatedIndex: -1, // -1 means none, 0 = primary, 1 = secondary, etc.
+    whatsappOpened: false,
+    localNotificationFired: false,
+    emergencyTimestamp: '',
+  });
 
   const [steps, setSteps] = useState({
     emergencyActivated: false,
     smsSent: false,
-    smsStatus: '',
     callInitiated: false,
     liveTrackingActive: false,
     evidenceLocked: false,
-    emergencyTimestamp: '',
   });
 
-  // Fetch data & trigger SOS endpoint
+  // Call sequence escalation tracking
+  const [callEscalationStatus, setCallEscalationStatus] = useState<string>('Ready');
+
+  // Trigger local notification, backend locking, SMS composer and initial call on mount
   useEffect(() => {
     const triggerEmergencyProtocol = async () => {
       setLoading(true);
       try {
-        console.log("SOS button pressed");
+        console.log('[SOS] Button pressed. Triggering emergency protocol...');
 
-        let cont = [];
+        // 1. Get contacts
+        let cont: any[] = [];
         try {
           cont = await api.getContacts();
           setContacts(cont);
         } catch (e) {
-          console.log("Failed to load contacts for payload:", e);
+          console.error('[SOS] Failed to load contacts:', e);
         }
 
-        const payload = {
-          user: user,
-          journey: activeJourney,
-          location: { latitude: currentLat, longitude: currentLng },
-          trustedContacts: cont
-        };
-        console.log("SOS request payload", payload);
-
+        // 2. Trigger backend locking & coordinate stream setup
         const res = await api.triggerSos();
-        console.log("SOS response", res);
-        
         const active = await api.getActiveJourney();
         if (active) {
           setActiveJourney(active);
         }
         setEmergencyState(true);
 
+        const timestampStr = new Date().toLocaleTimeString() + ' (Local)';
+
+        // 3. Compile payload
+        const payload: IEmergencyPayload = {
+          userName: user?.name || 'FEMME Traveler',
+          latitude: currentLat || 12.9716,
+          longitude: currentLng || 77.5946,
+          cabNumber: activeJourney?.cab_number || 'EMERGENCY_SOS',
+          provider: activeJourney?.provider || 'adhoc',
+          pickupAddress: activeJourney?.pickup_address || 'SOS Trigger Point',
+          destAddress: activeJourney?.dest_address || 'Emergency Safehouse',
+          timestamp: new Date().toISOString(),
+          status: 'emergency',
+        };
+
+        // 4. Trigger Local Notification Alert
+        const localNotif = await commsProvider.triggerLocalAlert(payload.userName);
+
         setSteps({
           emergencyActivated: res.success ? true : false,
-          smsSent: res.sms_sent,
-          smsStatus: res.sms_status || (res.sms_sent ? 'SMS Sent' : 'SMS Failed'),
-          callInitiated: res.call_initiated,
+          smsSent: false,
+          callInitiated: false,
           liveTrackingActive: true,
           evidenceLocked: true,
-          emergencyTimestamp: new Date().toLocaleTimeString() + ' (Local)',
         });
+
+        setCommsState((prev) => ({
+          ...prev,
+          localNotificationFired: localNotif,
+          emergencyTimestamp: timestampStr,
+        }));
+
+        // 5. Auto-Launch SMS Composer for all guardians
+        if (cont.length > 0) {
+          const phones = cont.map((c) => c.phone);
+          const smsRes = await commsProvider.dispatchSmsToGuardians(phones, payload);
+          setCommsState((prev) => ({
+            ...prev,
+            smsMethod: smsRes.method as 'direct' | 'composer' | 'failed',
+          }));
+          setSteps((prev) => ({
+            ...prev,
+            smsSent: smsRes.success,
+          }));
+        }
+
+        // 6. Auto-Initiate Native Dialing for Primary Guardian
+        if (cont.length > 0 && cont[0]?.phone) {
+          setCallEscalationStatus(`Calling Primary: ${cont[0].name}...`);
+          const callRes = await commsProvider.initiateCall(cont[0].phone);
+          setCommsState((prev) => ({
+            ...prev,
+            callInitiatedIndex: 0,
+          }));
+          setSteps((prev) => ({
+            ...prev,
+            callInitiated: callRes,
+          }));
+        }
       } catch (err) {
-        console.log('SOS active page trigger error:', err);
+        console.error('[SOS] active page trigger error:', err);
       } finally {
         setLoading(false);
       }
@@ -87,41 +141,98 @@ export default function SOSScreen() {
     triggerEmergencyProtocol();
   }, []);
 
-  // Blinking wailing visual effect
+  // Listen for App State Changes to handle Dialing Escalation when user returns to app
+  useEffect(() => {
+    const handleAppStateChange = async (nextAppState: any) => {
+      if (appStateRef.current.match(/inactive|background/) && nextAppState === 'active') {
+        console.log('[SOS] App has returned to the foreground. Checking call escalation status...');
+        // If primary call was initiated and we have a secondary guardian, offer to call them if unanswered
+        if (commsState.callInitiatedIndex === 0 && contacts.length > 1) {
+          Alert.alert(
+            'Primary Guardian Unanswered?',
+            `Did ${contacts[0].name} answer the call? If not, dial secondary guardian immediately.`,
+            [
+              { text: 'Yes, Answered', style: 'cancel' },
+              {
+                text: `Call Secondary: ${contacts[1].name}`,
+                onPress: async () => {
+                  setCallEscalationStatus(`Calling Secondary: ${contacts[1].name}...`);
+                  const callRes = await commsProvider.initiateCall(contacts[1].phone);
+                  setCommsState((prev) => ({
+                    ...prev,
+                    callInitiatedIndex: 1,
+                  }));
+                  setSteps((prev) => ({
+                    ...prev,
+                    callInitiated: callRes,
+                  }));
+                },
+              },
+            ]
+          );
+        } else if (commsState.callInitiatedIndex === 1 && contacts.length > 2) {
+          Alert.alert(
+            'Secondary Guardian Unanswered?',
+            `Did ${contacts[1].name} answer the call? If not, dial tertiary guardian.`,
+            [
+              { text: 'Yes, Answered', style: 'cancel' },
+              {
+                text: `Call Tertiary: ${contacts[2].name}`,
+                onPress: async () => {
+                  setCallEscalationStatus(`Calling Tertiary: ${contacts[2].name}...`);
+                  const callRes = await commsProvider.initiateCall(contacts[2].phone);
+                  setCommsState((prev) => ({
+                    ...prev,
+                    callInitiatedIndex: 2,
+                  }));
+                  setSteps((prev) => ({
+                    ...prev,
+                    callInitiated: callRes,
+                  }));
+                },
+              },
+            ]
+          );
+        }
+      }
+      appStateRef.current = nextAppState;
+    };
+
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+    return () => subscription.remove();
+  }, [commsState, contacts]);
+
+  // Visual wailing blink effect
   useEffect(() => {
     const flashTimer = setInterval(() => {
       setBlinkingState((prev) => !prev);
     }, 400);
     return () => clearInterval(flashTimer);
   }, []);
+
+  // Siren audio load
   useEffect(() => {
-  const loadSiren = async () => {
-    try {
-      await Audio.setAudioModeAsync({
-        playsInSilentModeIOS: true,
-      });
-
-      const { sound } = await Audio.Sound.createAsync(
-        require('../../assets/siren.mp3'),
-        {
-          shouldPlay: true,
-          isLooping: true,
-          volume: 1.0,
-        }
-      );
-
-      soundRef.current = sound;
-    } catch (err) {
-      console.log('Siren error:', err);
-    }
-  };
-
-  loadSiren();
-
-  return () => {
-    soundRef.current?.unloadAsync();
-  };
-}, []);
+    const loadSiren = async () => {
+      try {
+        await Audio.setAudioModeAsync({ playsInSilentModeIOS: true });
+        const { sound } = await Audio.Sound.createAsync(
+          require('../../assets/siren.mp3'),
+          {
+            shouldPlay: true,
+            isLooping: true,
+            volume: 1.0,
+          }
+        );
+        soundRef.current = sound;
+      } catch (err) {
+        console.error('[SOS] Siren load error:', err);
+      }
+    };
+    loadSiren();
+    return () => {
+      soundRef.current?.unloadAsync();
+    };
+  }, []);
 
   const handleDeescalate = () => {
     Alert.alert(
@@ -134,6 +245,11 @@ export default function SOSScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
+              if (soundRef.current) {
+                await soundRef.current.stopAsync();
+                await soundRef.current.unloadAsync();
+                soundRef.current = null;
+              }
               await api.completeJourney();
               setActiveJourney(null);
               setEmergencyState(false);
@@ -142,7 +258,7 @@ export default function SOSScreen() {
               Alert.alert('Emergency Resolved', 'Emergency resolved. Guardians notified of safety.');
               router.replace('/(tabs)/dashboard');
             } catch (err) {
-              console.log(err);
+              console.error(err);
               setActiveJourney(null);
               setEmergencyState(false);
               resetTelemetryState();
@@ -155,43 +271,102 @@ export default function SOSScreen() {
     );
   };
 
-  const makePhoneCall = (number: string) => {
-    const cleanNumber = number.replace(/\s+/g, '');
-    Linking.openURL(`tel:${cleanNumber}`).catch(() => {
-      Alert.alert('Call Failed', 'Unable to initiate dialer on this device.');
-    });
+  // Explicit dispatch actions for Guardian panel
+  const dispatchManualSms = async () => {
+    if (contacts.length === 0) {
+      Alert.alert('No Contacts', 'Add trusted contacts first to send emergency SMS.');
+      return;
+    }
+    const payload: IEmergencyPayload = {
+      userName: user?.name || 'FEMME Traveler',
+      latitude: currentLat || 12.9716,
+      longitude: currentLng || 77.5946,
+      cabNumber: activeJourney?.cab_number || 'EMERGENCY_SOS',
+      provider: activeJourney?.provider || 'adhoc',
+      pickupAddress: activeJourney?.pickup_address || 'SOS Trigger Point',
+      destAddress: activeJourney?.dest_address || 'Emergency Safehouse',
+      timestamp: new Date().toISOString(),
+      status: 'emergency',
+    };
+    const phones = contacts.map((c) => c.phone);
+    const smsRes = await commsProvider.dispatchSmsToGuardians(phones, payload);
+    setCommsState((prev) => ({
+      ...prev,
+      smsMethod: smsRes.method as 'direct' | 'composer' | 'failed',
+    }));
+    setSteps((prev) => ({
+      ...prev,
+      smsSent: smsRes.success,
+    }));
+  };
+
+  const dispatchManualCall = async (phone: string, name: string, index: number) => {
+    setCallEscalationStatus(`Calling: ${name}...`);
+    const callRes = await commsProvider.initiateCall(phone);
+    setCommsState((prev) => ({
+      ...prev,
+      callInitiatedIndex: index,
+    }));
+    setSteps((prev) => ({
+      ...prev,
+      callInitiated: callRes,
+    }));
+  };
+
+  const dispatchManualWhatsApp = async () => {
+    if (contacts.length === 0) {
+      Alert.alert('No Contacts', 'Add trusted contacts first to send WhatsApp alert.');
+      return;
+    }
+    const payload: IEmergencyPayload = {
+      userName: user?.name || 'FEMME Traveler',
+      latitude: currentLat || 12.9716,
+      longitude: currentLng || 77.5946,
+      cabNumber: activeJourney?.cab_number || 'EMERGENCY_SOS',
+      provider: activeJourney?.provider || 'adhoc',
+      pickupAddress: activeJourney?.pickup_address || 'SOS Trigger Point',
+      destAddress: activeJourney?.dest_address || 'Emergency Safehouse',
+      timestamp: new Date().toISOString(),
+      status: 'emergency',
+    };
+    // Send to primary contact first, or open general WhatsApp share
+    const primaryPhone = contacts[0]?.phone || '';
+    const wsRes = await commsProvider.dispatchWhatsApp(primaryPhone, payload);
+    setCommsState((prev) => ({
+      ...prev,
+      whatsappOpened: wsRes,
+    }));
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Blinking Wailing Container */}
+        
+        {/* Blinking alarm container */}
         <View
           style={[
             styles.wailingBorder,
             blinkingState ? styles.borderRed : styles.borderGray,
           ]}
         >
-          {/* Pulsing Icon */}
           <View style={styles.sosLogo}>
             <ShieldAlert size={40} color="#ffffff" />
           </View>
-
           <Text style={styles.title}>EMERGENCY SOS ACTIVE</Text>
           <Text style={styles.subtitle}>
-            Live GPS stream dispatched to priority guardians
+            Native Android Safety Protocol Initiated
           </Text>
         </View>
 
-        {/* Progress Checklist */}
+        {/* Local Checklists */}
         <View style={styles.card}>
-          <Text style={styles.cardHeader}>Emergency Checklist Actions</Text>
-
+          <Text style={styles.cardHeader}>Emergency Checklist Status</Text>
+          
           <View style={styles.checklist}>
             {[
-              { key: 'emergencyActivated', text: 'Emergency Activated' },
-              { key: 'smsSent', text: steps.smsStatus || 'SMS Broadcast Sent' },
-              { key: 'callInitiated', text: 'Guardian Automated Call Initiated' },
+              { key: 'emergencyActivated', text: 'Emergency Triggered on Backend' },
+              { key: 'smsSent', text: commsState.smsMethod === 'composer' ? 'SMS Composer Prefilled' : (steps.smsSent ? 'SMS Dispatched' : 'SMS Composer Ready') },
+              { key: 'callInitiated', text: commsState.callInitiatedIndex !== -1 ? `Dialing Guardian #${commsState.callInitiatedIndex + 1}` : 'Call Dialing Ready' },
               { key: 'liveTrackingActive', text: 'Live GPS Broadcast Active' },
               { key: 'evidenceLocked', text: 'Sealed Evidence Vault Locked' },
             ].map((step) => {
@@ -218,31 +393,29 @@ export default function SOSScreen() {
             })}
           </View>
 
-          {steps.emergencyTimestamp ? (
+          {commsState.emergencyTimestamp ? (
             <View style={styles.timestampBox}>
               <Text style={styles.timestampLabel}>EMERGENCY TIMESTAMP:</Text>
-              <Text style={styles.timestampVal}>{steps.emergencyTimestamp}</Text>
+              <Text style={styles.timestampVal}>{commsState.emergencyTimestamp}</Text>
             </View>
           ) : null}
         </View>
 
-        {/* Siren Toggle */}
+        {/* Siren sound control toggle */}
         <TouchableOpacity
           style={[
             styles.sirenBtn,
             sirenPlaying ? styles.sirenActive : styles.sirenSilenced,
           ]}
           onPress={async () => {
-  if (!soundRef.current) return;
-
-  if (sirenPlaying) {
-    await soundRef.current.pauseAsync();
-  } else {
-    await soundRef.current.playAsync();
-  }
-
-  setSirenPlaying(!sirenPlaying);
-}}
+            if (!soundRef.current) return;
+            if (sirenPlaying) {
+              await soundRef.current.pauseAsync();
+            } else {
+              await soundRef.current.playAsync();
+            }
+            setSirenPlaying(!sirenPlaying);
+          }}
         >
           {sirenPlaying ? (
             <>
@@ -257,7 +430,69 @@ export default function SOSScreen() {
           )}
         </TouchableOpacity>
 
-        {/* Coordinates stream */}
+        {/* Guardian Escalation & One-Touch Panel */}
+        <View style={styles.card}>
+          <Text style={styles.cardHeader}>Guardian Panel & Call Escalation</Text>
+          <Text style={styles.panelStatus}>Escalation State: <Text style={styles.escalationVal}>{callEscalationStatus}</Text></Text>
+
+          {contacts.map((c, i) => (
+            <View key={c.id || i} style={styles.guardianPanelItem}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.guardianName}>{c.name}</Text>
+                <Text style={styles.guardianPriority}>Guardian #{i + 1} ({c.phone})</Text>
+              </View>
+              
+              <View style={styles.btnRow}>
+                <TouchableOpacity 
+                  style={[styles.smallActionBtn, commsState.callInitiatedIndex === i && styles.smallActionBtnActive]} 
+                  onPress={() => dispatchManualCall(c.phone, c.name, i)}
+                >
+                  <Phone size={14} color={commsState.callInitiatedIndex === i ? '#ffffff' : '#f43f5e'} />
+                </TouchableOpacity>
+              </View>
+            </View>
+          ))}
+
+          {contacts.length === 0 ? (
+            <Text style={styles.emptyContactsText}>
+              No priority guardians configured.
+            </Text>
+          ) : (
+            <View style={styles.mainCallBtnContainer}>
+              <TouchableOpacity 
+                style={styles.largeCallBtn} 
+                onPress={() => {
+                  const targetIndex = commsState.callInitiatedIndex === -1 ? 0 : (commsState.callInitiatedIndex >= contacts.length - 1 ? 0 : commsState.callInitiatedIndex + 1);
+                  const target = contacts[targetIndex];
+                  if (target) {
+                    dispatchManualCall(target.phone, target.name, targetIndex);
+                  }
+                }}
+              >
+                <Phone size={24} color="#ffffff" />
+                <Text style={styles.largeCallText}>CALL GUARDIAN NOW</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+
+        {/* Quick Communication Triggers */}
+        <View style={styles.card}>
+          <Text style={styles.cardHeader}>Manual App Dispatchers</Text>
+          <View style={styles.splitRow}>
+            <TouchableOpacity style={styles.quickDispatchBtn} onPress={dispatchManualSms}>
+              <Send size={16} color="#ffffff" style={{ marginRight: 6 }} />
+              <Text style={styles.quickDispatchText}>Resend SMS</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={[styles.quickDispatchBtn, { backgroundColor: '#25D366' }]} onPress={dispatchManualWhatsApp}>
+              <MessageSquare size={16} color="#ffffff" style={{ marginRight: 6 }} />
+              <Text style={styles.quickDispatchText}>WhatsApp Link</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Coordinate Display */}
         <View style={styles.card}>
           <View style={styles.coordsHeader}>
             <Text style={styles.coordsTitle}>Active Coordinate Stream:</Text>
@@ -265,46 +500,22 @@ export default function SOSScreen() {
           </View>
           <View style={styles.coordsMonospace}>
             <Text style={styles.monoText}>
-              Latitude: {activeJourney?.current_lat?.toFixed(5) || '12.97160'}
+              Latitude: {activeJourney?.current_lat?.toFixed(5) || currentLat?.toFixed(5) || '12.97160'}
             </Text>
             <Text style={styles.monoText}>
-              Longitude: {activeJourney?.current_lng?.toFixed(5) || '77.59460'}
+              Longitude: {activeJourney?.current_lng?.toFixed(5) || currentLng?.toFixed(5) || '77.59460'}
             </Text>
             <Text style={styles.monoText}>
-              Cab Plate: {activeJourney?.cab_number?.toUpperCase() || 'EMERGENCY'}
+              Cab Plate: {activeJourney?.cab_number?.toUpperCase() || 'EMERGENCY_SOS'}
             </Text>
           </View>
         </View>
 
-        {/* Notified Guardians */}
-        <View style={styles.guardiansList}>
-          <Text style={styles.guardiansHeader}>Notified Guardians</Text>
-
-          {contacts.map((c, i) => (
-            <View key={c.id || i} style={styles.guardianItem}>
-              <View>
-                <Text style={styles.guardianName}>{c.name}</Text>
-                <Text style={styles.guardianPhone}>{c.phone}</Text>
-              </View>
-              <TouchableOpacity style={styles.callIcon} onPress={() => makePhoneCall(c.phone)}>
-                <Phone size={14} color="#f43f5e" />
-              </TouchableOpacity>
-            </View>
-          ))}
-
-          {contacts.length === 0 ? (
-            <Text style={styles.emptyContactsText}>
-              No contacts configured. Emergency dispatcher triggers fallback webhooks.
-            </Text>
-          ) : null}
-        </View>
-
-        {/* De-escalate button */}
+        {/* Safe status confirm de-escalate button */}
         <TouchableOpacity style={styles.deescalateBtn} onPress={handleDeescalate}>
           <Text style={styles.deescalateText}>De-escalate & Set Safe Status</Text>
-          await soundRef.current?.stopAsync();
-          await soundRef.current?.unloadAsync();
         </TouchableOpacity>
+
       </ScrollView>
     </SafeAreaView>
   );
@@ -460,6 +671,96 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: 'bold',
   },
+  panelStatus: {
+    color: '#9ca3af',
+    fontSize: 11,
+    fontWeight: '500',
+    marginBottom: 12,
+  },
+  escalationVal: {
+    color: '#f43f5e',
+    fontWeight: 'bold',
+  },
+  guardianPanelItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#1e1e24',
+    borderColor: 'rgba(255, 255, 255, 0.04)',
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 8,
+  },
+  guardianPriority: {
+    fontSize: 10,
+    color: '#6b7280',
+    fontFamily: 'monospace',
+    marginTop: 2,
+  },
+  btnRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  smallActionBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: 'rgba(244, 63, 94, 0.08)',
+    borderColor: 'rgba(244, 63, 94, 0.2)',
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  smallActionBtnActive: {
+    backgroundColor: '#f43f5e',
+    borderColor: '#f43f5e',
+  },
+  mainCallBtnContainer: {
+    marginTop: 12,
+    alignItems: 'center',
+    width: '100%',
+  },
+  largeCallBtn: {
+    width: '100%',
+    height: 54,
+    backgroundColor: '#ef4444',
+    borderRadius: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    shadowColor: '#ef4444',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  largeCallText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '900',
+    letterSpacing: 0.5,
+  },
+  splitRow: {
+    flexDirection: 'row',
+    width: '100%',
+    gap: 12,
+  },
+  quickDispatchBtn: {
+    flex: 1,
+    height: 44,
+    backgroundColor: '#3b82f6',
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  quickDispatchText: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
   coordsHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -485,50 +786,6 @@ const styles = StyleSheet.create({
     fontFamily: 'monospace',
     fontSize: 11,
   },
-  guardiansList: {
-    width: '100%',
-    gap: 10,
-  },
-  guardiansHeader: {
-    fontSize: 11,
-    fontWeight: 'bold',
-    color: '#9ca3af',
-    textTransform: 'uppercase',
-    letterSpacing: 1.5,
-    textAlign: 'center',
-    marginBottom: 4,
-  },
-  guardianItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#1e1e24',
-    borderColor: 'rgba(255, 255, 255, 0.04)',
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 12,
-  },
-  guardianName: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    color: '#ffffff',
-  },
-  guardianPhone: {
-    fontSize: 10,
-    color: '#6b7280',
-    fontFamily: 'monospace',
-    marginTop: 2,
-  },
-  callIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    backgroundColor: 'rgba(244, 63, 94, 0.08)',
-    borderColor: 'rgba(244, 63, 94, 0.2)',
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   emptyContactsText: {
     color: '#6b7280',
     fontSize: 11,
@@ -553,5 +810,10 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 13,
     fontWeight: 'bold',
+  },
+  guardianName: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#ffffff',
   },
 });
