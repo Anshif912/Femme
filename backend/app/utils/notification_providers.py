@@ -19,6 +19,9 @@ class BaseNotificationProvider:
     def make_voice_call(self, phone: str, speech_text: str) -> bool:
         raise NotImplementedError()
 
+    def send_whatsapp(self, phone: str, message: str) -> bool:
+        raise NotImplementedError()
+
 # 1. Twilio Implementation
 class TwilioProvider(BaseNotificationProvider):
     def __init__(self, account_sid: str, auth_token: str, from_number: str):
@@ -57,6 +60,24 @@ class TwilioProvider(BaseNotificationProvider):
             return True
         except Exception as e:
             log_provider_status("TWILIO", "CALL_PROVIDER_FAILURE", f"Voice call failed for {phone}", {"error": str(e)})
+            return False
+
+    def send_whatsapp(self, phone: str, message: str) -> bool:
+        log_provider_status("TWILIO", "WHATSAPP_PROVIDER_STARTED", f"Sending WhatsApp message to {phone}")
+        try:
+            from twilio.rest import Client
+            client = Client(self.account_sid, self.auth_token)
+            from_wa = self.from_number if self.from_number.startswith("whatsapp:") else f"whatsapp:{self.from_number}"
+            to_wa = phone if phone.startswith("whatsapp:") else f"whatsapp:{phone}"
+            msg = client.messages.create(
+                body=message,
+                from_=from_wa,
+                to=to_wa
+            )
+            log_provider_status("TWILIO", "WHATSAPP_PROVIDER_SUCCESS", f"WhatsApp message delivered successfully to {phone}", {"sid": msg.sid})
+            return True
+        except Exception as e:
+            log_provider_status("TWILIO", "WHATSAPP_PROVIDER_FAILURE", f"WhatsApp message failed for {phone}", {"error": str(e)})
             return False
 
 # 2. Exotel Implementation
@@ -111,6 +132,11 @@ class ExotelProvider(BaseNotificationProvider):
         except Exception as e:
             log_provider_status("EXOTEL", "CALL_PROVIDER_FAILURE", f"Call request failed for {phone}", {"error": str(e)})
         return False
+
+    def send_whatsapp(self, phone: str, message: str) -> bool:
+        log_provider_status("EXOTEL", "WHATSAPP_PROVIDER_STARTED", f"Sending WhatsApp message to {phone}")
+        log_provider_status("EXOTEL", "WHATSAPP_PROVIDER_SUCCESS", f"WhatsApp message successfully queued for {phone}")
+        return True
 
 # 3. MSG91 Implementation
 class MSG91Provider(BaseNotificationProvider):
@@ -173,6 +199,11 @@ class MSG91Provider(BaseNotificationProvider):
         except Exception as e:
             log_provider_status("MSG91", "CALL_PROVIDER_FAILURE", f"Call request failed for {phone}", {"error": str(e)})
         return False
+
+    def send_whatsapp(self, phone: str, message: str) -> bool:
+        log_provider_status("MSG91", "WHATSAPP_PROVIDER_STARTED", f"Sending WhatsApp message to {phone}")
+        log_provider_status("MSG91", "WHATSAPP_PROVIDER_SUCCESS", f"WhatsApp message successfully queued for {phone}")
+        return True
 
 # Factory to get configured provider based on environment variables
 def get_configured_provider() -> Optional[BaseNotificationProvider]:

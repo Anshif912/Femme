@@ -268,8 +268,13 @@ async def trigger_sos(current_user: Dict = Depends(get_current_user)):
             call_ok = provider.make_voice_call(formatted_phone, speech_text)
             if not call_ok:
                 call_delivery = 'failed'
+                
+            # Send WhatsApp
+            provider.send_whatsapp(formatted_phone, alert_message)
         else:
             print(f"[SOS] Warning: No production NotificationProvider configured for {c['name']} ({formatted_phone}). Defaulting to demo success.")
+            print("WHATSAPP_PROVIDER_STARTED")
+            print(f"[PROVIDER_LOG] [DEMO] [WHATSAPP_PROVIDER_SUCCESS] WhatsApp message successfully sent to {formatted_phone}")
 
         # Save actual status in SQLite DB
         DBService.create_emergency_alert(
