@@ -1,4 +1,25 @@
 import os
+
+# Load .env file manually if it exists in current dir or parent directories
+def load_env_file():
+    for path in ['.env', '../.env', '../../.env']:
+        if os.path.exists(path):
+            try:
+                with open(path, 'r', encoding='utf-8') as f:
+                    for line in f:
+                        line = line.strip()
+                        if line and not line.startswith('#') and '=' in line:
+                            key, val = line.split('=', 1)
+                            key = key.strip()
+                            val = val.strip().strip("'\"")
+                            if key not in os.environ:
+                                os.environ[key] = val
+                break
+            except Exception:
+                pass
+
+load_env_file()
+
 from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
