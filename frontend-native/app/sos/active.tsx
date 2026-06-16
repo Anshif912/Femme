@@ -15,7 +15,7 @@ import { useRouter } from 'expo-router';
 import { useStore } from '../../store/useStore';
 import { api } from '../../utils/api';
 import { ShieldAlert, Volume2, VolumeX, Phone, MessageSquare, Send, Check } from 'lucide-react-native';
-import { commsProvider, IEmergencyPayload } from '../../utils/CommunicationProvider';
+import { commsProvider, IEmergencyPayload, logNative } from '../../utils/CommunicationProvider';
 
 export default function SOSScreen() {
   const router = useRouter();
@@ -53,7 +53,7 @@ export default function SOSScreen() {
     const triggerEmergencyProtocol = async () => {
       setLoading(true);
       try {
-        console.log('[SOS] Button pressed. Triggering emergency protocol...');
+        logNative('SOS_TRIGGER_HANDLER_STARTED', 'SOS Trigger activated. Initializing emergency protocol.');
 
         // 1. Get contacts
         let cont: any[] = [];
@@ -61,11 +61,12 @@ export default function SOSScreen() {
           cont = await api.getContacts();
           setContacts(cont);
         } catch (e) {
-          console.error('[SOS] Failed to load contacts:', e);
+          logNative('SOS_TRIGGER_HANDLER_ERROR', 'Failed to load contacts for emergency payload', { error: e });
         }
 
         // 2. Trigger backend locking & coordinate stream setup
         const res = await api.triggerSos();
+        logNative('SOS_TRIGGER_HANDLER_SUCCESS', 'Backend emergency lock state achieved', { success: res.success });
         const active = await api.getActiveJourney();
         if (active) {
           setActiveJourney(active);
