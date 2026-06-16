@@ -14,6 +14,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useStore } from '../store/useStore';
 import { api } from '../utils/api';
 import { AlertTriangle } from 'lucide-react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function RootLayout() {
   const [isHydrated, setIsHydrated] = useState(false);
@@ -31,6 +32,34 @@ export default function RootLayout() {
   const audioAnomaly = useStore((state) => state.audioAnomaly);
 
   const timerRef = useRef<any | null>(null);
+  
+  const [isBackendReachable, setIsBackendReachable] = useState<boolean | null>(null);
+
+  // Verify backend connection on startup and hydration
+  useEffect(() => {
+    if (!isHydrated) return;
+
+    let isMounted = true;
+    const checkReachability = async () => {
+      try {
+        await api.checkHealth();
+        if (isMounted) setIsBackendReachable(true);
+      } catch (err) {
+        console.log('[RootLayout] Startup reachability check failed:', err);
+        if (isMounted) setIsBackendReachable(false);
+      }
+    };
+
+    checkReachability();
+
+    // Recheck periodically every 10s
+    const interval = setInterval(checkReachability, 10000);
+
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, [isHydrated]);
 
   // Monitor Zustand hydration from SecureStore
   useEffect(() => {
@@ -118,6 +147,14 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <StatusBar style="light" backgroundColor="#0f0f12" />
+      {isBackendReachable === false && (
+        <SafeAreaView style={styles.errorBannerContainer} edges={['top']}>
+          <View style={styles.errorBanner}>
+            <AlertTriangle size={14} color="#ffffff" style={{ marginRight: 8 }} />
+            <Text style={styles.errorBannerText}>Backend unreachable</Text>
+          </View>
+        </SafeAreaView>
+      )}
       <Stack
         screenOptions={{
           headerShown: false,
@@ -302,5 +339,20 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     textAlign: 'center',
     lineHeight: 13,
+  },
+  errorBannerContainer: {
+    backgroundColor: '#ef4444',
+  },
+  errorBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+  },
+  errorBannerText: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: 'bold',
   },
 });

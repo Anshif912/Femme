@@ -30,30 +30,41 @@ async function request(path: string, options: RequestInit = {}) {
     headers.set('Content-Type', 'application/json');
   }
 
-  const response = await fetch(`${getApiBase()}${path}`, {
-    ...options,
-    headers
-  });
+  try {
+    const response = await fetch(`${getApiBase()}${path}`, {
+      ...options,
+      headers
+    });
 
-  if (!response.ok) {
-    let errorDetail = 'API Request Failed';
-    try {
-      const errorJson = await response.json();
-      errorDetail = errorJson.detail || JSON.stringify(errorJson);
-    } catch (_) {}
-    throw new Error(errorDetail);
+    if (!response.ok) {
+      let errorDetail = 'API Request Failed';
+      try {
+        const errorJson = await response.json();
+        errorDetail = errorJson.detail || JSON.stringify(errorJson);
+      } catch (_) {}
+      throw new Error(errorDetail);
+    }
+
+    // Handle blob responses (e.g. PDF report download)
+    const contentType = response.headers.get('Content-Type');
+    if (contentType && contentType.includes('application/pdf')) {
+      return response.blob();
+    }
+
+    return response.json();
+  } catch (err: any) {
+    if (err instanceof TypeError && (err.message === 'Failed to fetch' || err.message.includes('fetch') || err.message === 'Network request failed')) {
+      throw new Error('Backend unreachable');
+    }
+    throw err;
   }
-
-  // Handle blob responses (e.g. PDF report download)
-  const contentType = response.headers.get('Content-Type');
-  if (contentType && contentType.includes('application/pdf')) {
-    return response.blob();
-  }
-
-  return response.json();
 }
 
 export const api = {
+  // Health
+  checkHealth: () => 
+    request('/health'),
+
   // Auth
   requestOtp: (phone: string) => 
     request('/auth/send-otp', { method: 'POST', body: JSON.stringify({ phone }) }),

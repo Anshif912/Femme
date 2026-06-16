@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useStore } from '../store/useStore';
 import api from '../utils/api';
-import { Users, UserPlus, Trash2, ShieldAlert, CheckCircle2 } from 'lucide-react';
+import { Users, UserPlus, Trash2, ShieldAlert, CheckCircle2, Edit } from 'lucide-react';
 
 export const TrustedContactsPage: React.FC = () => {
   const [contacts, setContacts] = useState<any[]>([]);
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [priority, setPriority] = useState(1);
+  const [editingId, setEditingId] = useState<string | null>(null);
   
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
@@ -26,7 +27,25 @@ export const TrustedContactsPage: React.FC = () => {
     fetchContacts();
   }, []);
 
-  const handleAdd = async (e: React.FormEvent) => {
+  const handleEditSelect = (contact: any) => {
+    setEditingId(contact.id);
+    setName(contact.name);
+    setPhone(contact.phone);
+    setPriority(contact.priority);
+    setError('');
+    setMessage('');
+  };
+
+  const handleCancelEdit = () => {
+    setEditingId(null);
+    setName('');
+    setPhone('');
+    setPriority(1);
+    setError('');
+    setMessage('');
+  };
+
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setMessage('');
@@ -36,16 +55,30 @@ export const TrustedContactsPage: React.FC = () => {
       return;
     }
 
+    const payload = { name, phone, priority };
+    console.log("Adding contact...");
+    console.log("Request payload...", payload);
+
     setLoading(true);
     try {
-      await api.addContact({ name, phone, priority });
+      let res;
+      if (editingId) {
+        res = await api.updateContact(editingId, payload);
+        console.log("Response received...", res);
+        setMessage('Contact details updated successfully.');
+        setEditingId(null);
+      } else {
+        res = await api.addContact(payload);
+        console.log("Response received...", res);
+        setMessage('Contact successfully registered as priority guardian.');
+      }
       setName('');
       setPhone('');
       setPriority(1);
-      setMessage('Contact successfully registered as priority guardian.');
       fetchContacts();
     } catch (err: any) {
-      setError(err.message || 'Failed to register contact.');
+      console.log("Response received (error)...", err);
+      setError(err.message || 'Failed to save contact.');
     } finally {
       setLoading(false);
     }
@@ -85,14 +118,14 @@ export const TrustedContactsPage: React.FC = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         
-        {/* Left Side: Form to add contact */}
+        {/* Left Side: Form to add/edit contact */}
         <div className="glass-card p-6 rounded-2xl border border-gray-800 space-y-5">
           <h3 className="text-base font-bold text-white flex items-center gap-2">
             <UserPlus className="w-5 h-5 text-brand-500" />
-            Add New Guardian
+            {editingId ? 'Edit Guardian Details' : 'Add New Guardian'}
           </h3>
 
-          <form onSubmit={handleAdd} className="space-y-4">
+          <form onSubmit={handleSave} className="space-y-4">
             <div>
               <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Guardian Name</label>
               <input
@@ -130,13 +163,24 @@ export const TrustedContactsPage: React.FC = () => {
               </select>
             </div>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-3 bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-xl transition duration-150 text-xs shadow-md"
-            >
-              {loading ? 'Registering...' : 'Register Priority Guardian'}
-            </button>
+            <div className="flex gap-2">
+              <button
+                type="submit"
+                disabled={loading}
+                className="flex-1 py-3 bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-xl transition duration-150 text-xs shadow-md"
+              >
+                {loading ? 'Saving...' : editingId ? 'Update Guardian' : 'Register Priority Guardian'}
+              </button>
+              {editingId && (
+                <button
+                  type="button"
+                  onClick={handleCancelEdit}
+                  className="py-3 px-4 bg-gray-800 hover:bg-gray-700 text-gray-300 font-bold rounded-xl transition duration-150 text-xs"
+                >
+                  Cancel
+                </button>
+              )}
+            </div>
           </form>
         </div>
 
@@ -163,13 +207,24 @@ export const TrustedContactsPage: React.FC = () => {
                   </div>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => handleDelete(contact.id)}
-                  className="p-2 bg-gray-900 border border-gray-800 hover:border-red-500/20 text-gray-500 hover:text-red-400 rounded-lg transition"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleEditSelect(contact)}
+                    className="p-2 bg-gray-900 border border-gray-800 hover:border-brand-500/20 text-gray-500 hover:text-brand-400 rounded-lg transition"
+                    title="Edit Guardian"
+                  >
+                    <Edit className="w-4 h-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(contact.id)}
+                    className="p-2 bg-gray-900 border border-gray-800 hover:border-red-500/20 text-gray-500 hover:text-red-400 rounded-lg transition"
+                    title="Remove Guardian"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
             ))}
 

@@ -30,6 +30,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.get("/health")
+@app.get(f"{settings.API_V1_STR}/health")
+async def health_check():
+    return {"status": "healthy", "message": "FEMME Passive Safety Backend is reachable"}
+
 # Authentication Request models
 class PhoneAuthRequest(BaseModel):
     phone: str

@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useStore } from './store/useStore';
 import { Layout } from './components/Layout';
+import { api } from './utils/api';
+import { AlertTriangle } from 'lucide-react';
 
 // Import Pages
 import { LandingPage } from './pages/LandingPage';
@@ -37,8 +39,39 @@ const PublicOnlyRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
 };
 
 export const App: React.FC = () => {
+  const [isBackendReachable, setIsBackendReachable] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    const checkReachability = async () => {
+      try {
+        await api.checkHealth();
+        if (isMounted) setIsBackendReachable(true);
+      } catch (err) {
+        console.error('[App] Startup reachability check failed:', err);
+        if (isMounted) setIsBackendReachable(false);
+      }
+    };
+
+    checkReachability();
+
+    // Recheck periodically every 10s
+    const interval = setInterval(checkReachability, 10000);
+
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, []);
+
   return (
     <Router>
+      {isBackendReachable === false && (
+        <div className="bg-red-600 text-white text-center py-2 px-4 flex items-center justify-center gap-2 font-bold text-sm z-50 relative">
+          <AlertTriangle className="w-4 h-4" />
+          <span>Backend unreachable</span>
+        </div>
+      )}
       <Routes>
         {/* Public Landing */}
         <Route path="/" element={<LandingPage />} />

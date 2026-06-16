@@ -11,7 +11,7 @@ export const getApiBase = async () => {
   } catch {}
   
   // Default Android emulator loopback
-  return 'http://192.168.137.1:8000/api/v1';
+  return 'http://10.0.2.2:8000/api/v1';
 };
 
 async function request(path: string, options: RequestInit = {}) {
@@ -60,11 +60,18 @@ async function request(path: string, options: RequestInit = {}) {
     if (err.name === 'AbortError') {
       throw new Error('Connection timed out. Ensure the backend server is running and reachable.');
     }
+    if (err instanceof TypeError && (err.message === 'Network request failed' || err.message.includes('fetch'))) {
+      throw new Error('Backend unreachable');
+    }
     throw err;
   }
 }
 
 export const api = {
+  // Health
+  checkHealth: () => 
+    request('/health'),
+
   // Auth
   requestOtp: (phone: string) => 
     request('/auth/send-otp', { method: 'POST', body: JSON.stringify({ phone }) }),

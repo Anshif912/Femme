@@ -64,22 +64,26 @@ export default function ContactsScreen() {
       return;
     }
 
+    const payload = {
+      name: name.trim(),
+      phone: phone.trim(),
+      priority,
+    };
+
+    console.log("Adding contact...");
+    console.log("Request payload...", payload);
+
     setLoading(true);
     try {
+      let res;
       if (editingId) {
-        await api.updateContact(editingId, {
-          name: name.trim(),
-          phone: phone.trim(),
-          priority,
-        });
+        res = await api.updateContact(editingId, payload);
+        console.log("Response received...", res);
         setMessage('Contact details updated successfully.');
         setEditingId(null);
       } else {
-        await api.addContact({
-          name: name.trim(),
-          phone: phone.trim(),
-          priority,
-        });
+        res = await api.addContact(payload);
+        console.log("Response received...", res);
         setMessage('Contact successfully registered as priority guardian.');
       }
       setName('');
@@ -87,6 +91,7 @@ export default function ContactsScreen() {
       setPriority(1);
       fetchContacts();
     } catch (err: any) {
+      console.log("Response received (error)...", err);
       setError(err.message || 'Failed to save contact.');
     } finally {
       setLoading(false);
