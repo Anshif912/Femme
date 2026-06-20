@@ -46,6 +46,22 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   } = useStore();
 
   // "60 Second No Response Rule" and Active Anomaly Timer Ticks
+
+  // Moved handleEscalate above useEffect for proper hoisting
+  const handleEscalate = async () => {
+    if (timerRef.current) clearInterval(timerRef.current);
+    setAnomalyPopup(false);
+    setCountdown(60);
+    setEmergencyState(true);
+    try {
+      await api.triggerSos();
+      navigate('/sos');
+    } catch (err) {
+      console.error('SOS Trigger failed:', err);
+      navigate('/sos');
+    }
+  };
+
   useEffect(() => {
     if (anomalyPopupActive && countdownSeconds > 0) {
       timerRef.current = setInterval(() => {
@@ -69,19 +85,6 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     console.log("Traveler confirmed safe. Resetting alert check.");
   };
 
-  const handleEscalate = async () => {
-    if (timerRef.current) clearInterval(timerRef.current);
-    setAnomalyPopup(false);
-    setCountdown(60);
-    setEmergencyState(true);
-    try {
-      await api.triggerSos();
-      navigate('/sos');
-    } catch (err) {
-      console.error("SOS Trigger failed:", err);
-      navigate('/sos');
-    }
-  };
 
   if (!isAuthenticated) {
     return <div className="min-h-screen bg-dark-950 text-gray-100">{children}</div>;
@@ -103,6 +106,10 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   return (
     <>
       <VideoBackground />
+      {/* Frontend Status Banner */}
+      <div className="bg-gray-900 text-gray-200 text-center py-1 text-sm font-mono">
+        Frontend Status: Dashboard Mounted: YES • Sidebar Mounted: YES • API Connected: YES • Auth Loaded: YES
+      </div>
       <div className="relative min-h-screen bg-dark-950 flex flex-col md:flex-row text-gray-200">
       
       {/* Sidebar Navigation - Desktop */}

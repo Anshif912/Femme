@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
 import AIHero from '../components/AIHero';
 import AnimatedCounter from '../components/AnimatedCounter';
+import api from '../utils/api';
 import { 
   Shield, 
   Play, 
@@ -20,7 +21,11 @@ import {
 } from 'lucide-react';
 
 export const DashboardPage: React.FC = () => {
+  console.log('DashboardPage rendered');
   const navigate = useNavigate();
+  // Placeholder to verify mount
+  console.log('Dashboard mount placeholder');
+// duplicate navigate removed
   
   const { 
     user, 

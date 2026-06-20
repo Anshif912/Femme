@@ -9,7 +9,7 @@ import { AlertTriangle } from 'lucide-react';
 // Import Pages
 import { LandingPage } from './pages/LandingPage';
 import { AuthPage } from './pages/AuthPage';
-import { DashboardPage } from './pages/DashboardPage';
+import DashboardPage from './pages/DashboardPage';
 import { JourneySetupPage } from './pages/JourneySetupPage';
 import { ActiveJourneyPage } from './pages/ActiveJourneyPage';
 import { RouteViewPage } from './pages/RouteViewPage';
