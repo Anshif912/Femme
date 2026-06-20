@@ -89,7 +89,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
 
   if (!isAuthenticated) {
-    return <div className="min-h-screen bg-dark-950 text-gray-100">{children}</div>;
+    return <div className="min-h-screen bg-[#F6F3ED] text-[#0F172A]">{children}</div>;
   }
 
   const navItems = [
@@ -109,22 +109,22 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     <>
       
       {/* Frontend Status Banner */}
-      <div className="bg-gray-900 text-gray-200 text-center py-1 text-sm font-mono">
+      <div className="bg-slate-100 text-slate-600 border-b border-slate-200/50 text-center py-1 text-sm font-mono">
         Frontend Status: Dashboard Mounted: YES • Sidebar Mounted: YES • API Connected: YES • Auth Loaded: YES
       </div>
-      <div className="relative min-h-screen bg-dark-950 flex flex-col md:flex-row text-[#0F172A] overflow-hidden">
+      <div className="relative min-h-screen bg-[#F6F3ED] flex flex-col md:flex-row text-[#0F172A] overflow-hidden">
         {/* ambient luxury background glows */}
         <div className="absolute top-[-10%] right-[-10%] w-[500px] h-[500px] bg-gradient-to-br from-brand-500/10 to-accent/5 rounded-full blur-[100px] pointer-events-none z-0"></div>
         <div className="absolute bottom-[-10%] left-[20%] w-[600px] h-[600px] bg-gradient-to-tr from-brand-500/5 to-transparent rounded-full blur-[130px] pointer-events-none z-0"></div>
       
       {/* Sidebar Navigation - Desktop */}
-      <aside className="hidden md:flex flex-col w-64 bg-dark-900 border-r border-slate-200/60 p-5 shrink-0 shadow-[4px_0_24px_rgba(15,23,42,0.01)] z-10">
+      <aside className="hidden md:flex flex-col w-64 bg-white/70 backdrop-blur-xl border-r border-slate-200/40 p-5 shrink-0 shadow-lg z-10">
         <div className="flex items-center gap-3 px-1 py-4 border-b border-slate-100 mb-6">
           <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-brand-600 to-brand-400 flex items-center justify-center animate-pulse-slow shadow-sm">
             <Shield className="w-4 h-4 text-white" />
           </div>
           <div>
-            <h1 className="font-extrabold text-base text-gray-100 tracking-tight">FEMME</h1>
+            <h1 className="font-extrabold text-base text-slate-800 tracking-tight">FEMME</h1>
             <p className="text-[9px] text-brand-600 font-bold tracking-widest uppercase">SHE TRAVELS. WE GUARD.</p>
           </div>
         </div>
@@ -137,10 +137,10 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
               <Link
                 key={item.path}
                 to={item.path}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 ${
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 border border-transparent ${
                   isActive 
-                    ? 'bg-brand-500/10 text-brand-600 border border-brand-500/10 shadow-[0_2px_10px_rgba(124,58,237,0.02)]' 
-                    : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
+                    ? 'bg-brand-500/10 text-brand-700 border-brand-500/15 shadow-sm' 
+                    : 'text-slate-600 hover:bg-white/40 hover:text-brand-600'
                 }`}
               >
                 <Icon className={`w-4.5 h-4.5 ${isActive ? 'text-brand-500' : 'text-slate-400'}`} />
@@ -180,13 +180,13 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         <div className="border-t border-slate-100 pt-4 mt-4">
           <div className="flex items-center justify-between gap-3 px-2 mb-3">
             <div className="truncate">
-              <p className="text-sm font-semibold text-gray-100 truncate">{user?.name}</p>
-              <p className="text-xs text-gray-500 truncate">{user?.phone}</p>
+              <p className="text-sm font-semibold text-slate-900 truncate">{user?.name}</p>
+              <p className="text-xs text-slate-500 truncate">{user?.phone}</p>
             </div>
           </div>
           <button
             onClick={logout}
-            className="flex items-center gap-3 w-full px-3 py-2 rounded-lg text-sm text-slate-500 hover:bg-red-50 hover:text-red-600 transition-colors duration-200"
+            className="flex items-center gap-3 w-full px-3 py-2 rounded-lg text-sm text-slate-500 hover:bg-red-50/50 hover:text-red-600 transition-colors duration-200"
           >
             <LogOut className="w-4 h-4" />
             Sign Out
@@ -198,12 +198,12 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       <div className="flex-1 flex flex-col min-w-0">
         
         {/* Mobile Header */}
-        <header className="md:hidden flex items-center justify-between bg-dark-900 border-b border-gray-800 px-4 py-3 shrink-0">
+        <header className="md:hidden flex items-center justify-between bg-white/70 backdrop-blur-md border-b border-slate-200/50 px-4 py-3 shrink-0 z-10">
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-brand-600 to-brand-400 flex items-center justify-center">
               <Shield className="w-4 h-4 text-white" />
             </div>
-            <span className="font-extrabold text-gray-100 tracking-wide">FEMME</span>
+            <span className="font-extrabold text-slate-800 tracking-wide">FEMME</span>
           </div>
           {activeJourney && (
             <Link to="/route-view" className="text-xs px-2.5 py-1 bg-brand-600 text-white rounded-full font-bold flex items-center gap-1.5 animate-pulse">
@@ -221,7 +221,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           </AnimatePresence>
 
         {/* Bottom Nav Bar - Mobile Only */}
-        <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-dark-900/90 backdrop-blur-md border-t border-gray-800 flex justify-around py-2 px-1 z-40">
+        <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white/75 backdrop-blur-xl border-t border-slate-200/50 flex justify-around py-2 px-1 z-40 shadow-lg">
           {navItems.slice(0, 5).map((item) => {
             const Icon = item.icon;
             const isActive = location.pathname === item.path;
@@ -230,7 +230,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                 key={item.path}
                 to={item.path}
                 className={`flex flex-col items-center justify-center py-1 px-3 rounded-lg transition-colors ${
-                  isActive ? 'text-brand-400' : 'text-gray-400'
+                  isActive ? 'text-brand-600' : 'text-slate-400'
                 }`}
               >
                 <Icon className="w-5 h-5" />
@@ -241,7 +241,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           <button
             onClick={() => navigate('/settings')}
             className={`flex flex-col items-center justify-center py-1 px-3 rounded-lg ${
-              location.pathname === '/settings' ? 'text-brand-400' : 'text-gray-400'
+              location.pathname === '/settings' ? 'text-brand-600' : 'text-slate-400'
             }`}
           >
             <Settings className="w-5 h-5" />
@@ -252,7 +252,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
       {/* Global Are You Okay Alert Prompt Modal */}
       {anomalyPopupActive && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50 animate-fade-in">
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50 animate-fade-in">
           <div className="glass-panel-heavy p-6 max-w-md w-full rounded-2xl border border-red-500/30 text-center shadow-2xl relative overflow-hidden animate-scale-up">
             
             {/* Danger Glow Header */}
@@ -260,8 +260,8 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
               <AlertTriangle className="w-8 h-8 text-red-500 animate-bounce" />
             </div>
 
-            <h3 className="text-xl font-bold text-gray-100 mb-2">Are You Okay?</h3>
-            <p className="text-sm text-gray-300 mb-6">
+            <h3 className="text-xl font-bold text-slate-900 mb-2">Are You Okay?</h3>
+            <p className="text-sm text-slate-600 mb-6 font-medium">
               We detected {routeDeviation && "a Route Deviation"}
               {motionAnomaly && (routeDeviation ? " & " : "") + "an Unusual Stop"}
               {audioAnomaly && ((routeDeviation || motionAnomaly) ? " & " : "") + "Audio distress signatures"}.
@@ -269,8 +269,8 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
             </p>
 
             {/* Timer countdown progress ring */}
-            <div className="w-20 h-20 border-4 border-gray-800 border-t-red-500 rounded-full flex items-center justify-center mx-auto mb-6">
-              <span className="text-2xl font-black text-red-400">{countdownSeconds}s</span>
+            <div className="w-20 h-20 border-4 border-slate-200 border-t-red-500 rounded-full flex items-center justify-center mx-auto mb-6">
+              <span className="text-2xl font-black text-red-600">{countdownSeconds}s</span>
             </div>
 
             <div className="space-y-3">
@@ -283,7 +283,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
               <div className="grid grid-cols-2 gap-3">
                 <button
                   onClick={handleEscalate}
-                  className="py-2.5 bg-gray-800 hover:bg-gray-700 text-gray-300 font-semibold rounded-lg transition duration-200"
+                  className="py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-lg transition duration-200"
                 >
                   No, Escalated
                 </button>

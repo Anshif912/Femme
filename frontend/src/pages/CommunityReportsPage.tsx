@@ -116,8 +116,8 @@ export const CommunityReportsPage: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         {/* Left column: Anonymous Report Form */}
-        <div className="glass-card p-6 rounded-2xl border border-gray-800 space-y-5 h-fit">
-          <h3 className="text-base font-bold text-white flex items-center gap-2">
+        <div className="glass-card p-6 space-y-5 h-fit">
+          <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
             <ThumbsDown className="w-5 h-5 text-brand-500" />
             File Anonymous Cab Review
           </h3>
@@ -125,23 +125,23 @@ export const CommunityReportsPage: React.FC = () => {
           <form onSubmit={handleReport} className="space-y-4">
             
             <div>
-              <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Cab Plate Number</label>
+              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Cab Plate Number</label>
               <input
                 type="text"
                 placeholder="E.g., KA03MM1122"
                 value={cabNumber}
                 onChange={(e) => setCabNumber(e.target.value)}
-                className="w-full bg-dark-950 border border-gray-800 focus:border-brand-500/40 rounded-xl py-2.5 px-4 text-white text-xs outline-none transition"
+                className="w-full glass-input rounded-xl py-2.5 px-4 text-xs"
                 required
               />
             </div>
 
             <div>
-              <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Provider</label>
+              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Provider</label>
               <select
                 value={provider}
                 onChange={(e) => setProvider(e.target.value)}
-                className="w-full bg-dark-950 border border-gray-800 focus:border-brand-500/40 rounded-xl py-2.5 px-4 text-white text-xs outline-none transition"
+                className="w-full glass-input rounded-xl py-2.5 px-4 text-xs"
               >
                 <option value="uber">Uber</option>
                 <option value="ola">Ola</option>
@@ -151,14 +151,14 @@ export const CommunityReportsPage: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">Safety Rating</label>
+              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Safety Rating</label>
               <div className="flex gap-2">
                 {[1, 2, 3, 4, 5].map((star) => (
                   <button
                     key={star}
                     type="button"
                     onClick={() => setRating(star)}
-                    className="p-1 text-gray-500 hover:text-amber-400 transition"
+                    className="p-1 text-slate-500 hover:text-amber-400 transition"
                   >
                     <Star className={`w-6 h-6 ${star <= rating ? 'text-amber-400 fill-amber-400' : ''}`} />
                   </button>
@@ -167,7 +167,7 @@ export const CommunityReportsPage: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">Warning Tags</label>
+              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Warning Tags</label>
               <div className="flex flex-wrap gap-1.5">
                 {tagsList.map((tag) => {
                   const isSelected = selectedTags.includes(tag);
@@ -179,7 +179,7 @@ export const CommunityReportsPage: React.FC = () => {
                       className={`px-2 py-1 rounded text-[10px] font-bold transition ${
                         isSelected 
                           ? 'bg-red-500/10 border border-red-500/30 text-red-400' 
-                          : 'bg-dark-950/60 border border-gray-800 text-gray-400 hover:border-gray-700'
+                          : 'bg-white/40 border border-white/50 text-slate-500 hover:border-slate-300'
                       }`}
                     >
                       {tag}
@@ -190,13 +190,13 @@ export const CommunityReportsPage: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">Detailed Review</label>
+              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Detailed Review</label>
               <textarea
                 rows={3}
                 placeholder="Describe driver behavior, anomalies, or route concerns..."
                 value={review}
                 onChange={(e) => setReview(e.target.value)}
-                className="w-full bg-dark-950 border border-gray-800 focus:border-brand-500/40 rounded-xl p-3 text-xs outline-none text-white transition"
+                className="w-full glass-input rounded-xl p-3 text-xs"
                 required
               />
             </div>
@@ -210,13 +210,12 @@ export const CommunityReportsPage: React.FC = () => {
             </button>
           </form>
         </div>
-
         {/* Right column: Search & Feed */}
         <div className="lg:col-span-2 space-y-6">
           
           {/* Lookup plate */}
-          <div className="glass-card p-6 rounded-2xl border border-gray-800 space-y-4">
-            <h3 className="text-sm font-bold text-white flex items-center gap-2">
+          <div className="glass-card p-6 space-y-4">
+            <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
               <Search className="w-4.5 h-4.5 text-brand-500" />
               Lookup Cab Plate History
             </h3>
@@ -227,29 +226,29 @@ export const CommunityReportsPage: React.FC = () => {
                 placeholder="Enter exact cab number (e.g., KA03MM1122)..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="flex-1 bg-dark-950 border border-gray-800 focus:border-brand-500/40 rounded-xl py-2.5 px-4 text-white text-xs outline-none transition"
+                className="flex-1 glass-input rounded-xl py-2.5 px-4 text-xs"
               />
               <button
                 type="submit"
-                className="px-4 py-2 bg-dark-900 border border-gray-800 rounded-xl text-xs font-bold text-gray-300 hover:text-white transition"
+                className="px-4 py-2 bg-white/60 border border-white/40 rounded-xl text-xs font-bold text-slate-700 hover:text-slate-900 transition backdrop-blur-md"
               >
                 Search Plate
               </button>
             </form>
 
             {searchResult !== null && (
-              <div className="border-t border-gray-900 pt-4 space-y-3">
-                <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Search Results</h4>
+              <div className="border-t border-slate-200/60 pt-4 space-y-3">
+                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Search Results</h4>
                 {searchResult.map((r, i) => (
-                  <div key={i} className="p-4 bg-red-950/10 border border-red-500/20 rounded-xl space-y-2">
+                  <div key={i} className="p-4 bg-red-50/40 border border-red-500/20 rounded-xl space-y-2 text-slate-800">
                     <div className="flex justify-between text-xs">
-                      <span className="font-bold text-white uppercase">{r.provider} ({r.cab_number})</span>
+                      <span className="font-bold text-slate-900 uppercase">{r.provider} ({r.cab_number})</span>
                       <span className="text-amber-400 font-bold flex items-center gap-1">
                         <Star className="w-3.5 h-3.5 fill-amber-400" />
                         {r.rating}/5
                       </span>
                     </div>
-                    <p className="text-xs text-gray-300 font-light">{r.review}</p>
+                    <p className="text-xs text-slate-600 font-light">{r.review}</p>
                     <div className="flex flex-wrap gap-1.5 mt-2">
                       {r.tags.map((t: string) => (
                         <span key={t} className="px-1.5 py-0.5 bg-red-500/10 text-red-400 rounded text-[9px] border border-red-500/10 font-bold">{t}</span>
@@ -259,8 +258,8 @@ export const CommunityReportsPage: React.FC = () => {
                 ))}
 
                 {searchResult.length === 0 && (
-                  <div className="p-4 bg-emerald-950/10 border border-emerald-500/20 text-emerald-400 text-xs rounded-xl flex items-center gap-2.5">
-                    <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                  <div className="p-4 bg-emerald-50/40 border border-emerald-500/20 text-emerald-700 text-xs rounded-xl flex items-center gap-2.5">
+                    <CheckCircle2 className="w-5 h-5 text-emerald-600" />
                     <span>Zero incident reports matches for cab: <strong>{searchQuery.toUpperCase()}</strong>. Secured.</span>
                   </div>
                 )}
@@ -269,16 +268,16 @@ export const CommunityReportsPage: React.FC = () => {
           </div>
 
           {/* General Report Feed */}
-          <div className="glass-card p-6 rounded-2xl border border-gray-800 space-y-4">
-            <h3 className="text-sm font-bold text-white">Recent Community Warning Ledger</h3>
+          <div className="glass-card p-6 space-y-4">
+            <h3 className="text-sm font-bold text-slate-800">Recent Community Warning Ledger</h3>
 
             <div className="space-y-3">
               {reports.map((report, idx) => (
-                <div key={idx} className="p-4 bg-dark-950/40 border border-gray-800/80 rounded-xl space-y-3 text-xs">
+                <div key={idx} className="p-4 glass-item rounded-xl space-y-3 text-xs">
                   <div className="flex justify-between items-center">
                     <div>
-                      <p className="font-bold text-white uppercase tracking-wider">{report.cab_number}</p>
-                      <p className="text-[9px] text-gray-500 font-semibold uppercase">{report.provider}</p>
+                      <p className="font-bold text-slate-900 uppercase tracking-wider">{report.cab_number}</p>
+                      <p className="text-[9px] text-slate-500 font-semibold uppercase">{report.provider}</p>
                     </div>
                     <div className="flex items-center gap-1.5">
                       <div className="flex text-amber-400">
@@ -289,7 +288,7 @@ export const CommunityReportsPage: React.FC = () => {
                     </div>
                   </div>
 
-                  <p className="text-gray-300 leading-normal font-light">{report.review}</p>
+                  <p className="text-slate-600 leading-normal font-light">{report.review}</p>
                   
                   {report.tags && report.tags.length > 0 && (
                     <div className="flex flex-wrap gap-1.5 pt-1">
@@ -307,16 +306,14 @@ export const CommunityReportsPage: React.FC = () => {
               ))}
 
               {reports.length === 0 && (
-                <p className="text-xs text-gray-500 font-light text-center py-6">
+                <p className="text-xs text-slate-500 font-light text-center py-6">
                   No community warnings filed yet. Safe commute ledger is empty.
                 </p>
               )}
             </div>
           </div>
 
-        </div>
-
-      </div>
+        </div>      </div>
     </div>
   );
 };

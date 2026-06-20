@@ -218,17 +218,16 @@ export const ActiveJourneyPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      
       {/* Page Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-black text-white">Active Journey</h2>
-          <p className="text-xs text-gray-400">Invisible shield passively collecting device telemetry.</p>
+          <h2 className="text-2xl font-black text-slate-800">Active Journey</h2>
+          <p className="text-xs text-slate-500">Invisible shield passively collecting device telemetry.</p>
         </div>
         
         <button
           onClick={() => navigate('/route-view')}
-          className="px-4 py-2 bg-dark-900 hover:bg-dark-800 border border-gray-800 rounded-xl text-xs font-bold text-gray-300 transition"
+          className="px-4 py-2 bg-white/60 hover:bg-white/80 border border-white/40 rounded-xl text-xs font-bold text-slate-700 hover:text-slate-900 transition backdrop-blur-md shadow-sm"
         >
           View Map Router
         </button>
@@ -240,65 +239,64 @@ export const ActiveJourneyPage: React.FC = () => {
         <div className="lg:col-span-2 space-y-6">
           
           {/* Active Sensor Diagnostics */}
-          <div className="glass-card p-6 rounded-2xl border border-gray-800 grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="glass-card p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
             
             {/* Speedometer */}
-            <div className="flex flex-col items-center justify-center p-4 bg-dark-950/40 rounded-xl text-center border border-gray-800/40">
-              <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Vessel Speed</span>
+            <div className="flex flex-col items-center justify-center p-4 glass-item rounded-xl text-center">
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Vessel Speed</span>
               <div className="w-24 h-24 border-4 border-brand-500/10 border-t-brand-500 rounded-full flex items-center justify-center mb-3">
-                <span className="text-xl font-black text-white">{(currentSpeed * 3.6).toFixed(1)}</span>
+                <span className="text-xl font-black text-slate-800">{(currentSpeed * 3.6).toFixed(1)}</span>
               </div>
-              <span className="text-[11px] text-gray-400 font-semibold">KM/H</span>
+              <span className="text-[11px] text-slate-500 font-semibold">KM/H</span>
             </div>
 
             {/* Noise Monitor */}
-            <div className="flex flex-col items-center justify-center p-4 bg-dark-950/40 rounded-xl text-center border border-gray-800/40">
-              <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Ambient Decibels</span>
+            <div className="flex flex-col items-center justify-center p-4 glass-item rounded-xl text-center">
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Ambient Decibels</span>
               <div className={`w-24 h-24 border-4 rounded-full flex items-center justify-center mb-3 ${dbLevel > 80 ? 'border-red-500 animate-pulse' : 'border-emerald-500/40 border-t-emerald-500'}`}>
-                <span className="text-xl font-black text-white">{dbLevel}</span>
+                <span className="text-xl font-black text-slate-800">{dbLevel}</span>
               </div>
-              <span className="text-[11px] text-gray-400 font-semibold">{dbLevel > 80 ? '⚠️ LOUD/SCREAM' : 'QUIET'}</span>
+              <span className="text-[11px] text-slate-500 font-semibold">{dbLevel > 80 ? '⚠️ LOUD/SCREAM' : 'QUIET'}</span>
             </div>
 
             {/* Accel Vibrations */}
-            <div className="flex flex-col items-center justify-center p-4 bg-dark-950/40 rounded-xl text-center border border-gray-800/40">
-              <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Device Vibration</span>
+            <div className="flex flex-col items-center justify-center p-4 glass-item rounded-xl text-center">
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Device Vibration</span>
               <div className="w-24 h-24 border-4 border-indigo-500/40 border-t-indigo-500 rounded-full flex items-center justify-center mb-3">
-                <span className="text-xl font-black text-white">{vibrationVal}</span>
+                <span className="text-xl font-black text-slate-800">{vibrationVal}</span>
               </div>
-              <span className="text-[11px] text-gray-400 font-semibold">G-FORCE</span>
+              <span className="text-[11px] text-slate-500 font-semibold">G-FORCE</span>
             </div>
 
           </div>
 
           {/* Chronological Evidence Capsules Log */}
-          <div className="glass-card p-6 rounded-2xl border border-gray-800 space-y-4">
+          <div className="glass-card p-6 space-y-4">
             <div>
-              <span className="text-xs font-bold text-brand-400 tracking-widest uppercase">SHA-256 Capsule Logs</span>
-              <h3 className="text-lg font-bold text-white">Tamper-Proof Journey Capsules</h3>
-              <p className="text-xs text-gray-400">Cryptographically sealed coordinate captures compiled every 30s.</p>
+              <span className="text-xs font-bold text-brand-500 tracking-widest uppercase">SHA-256 Capsule Logs</span>
+              <h3 className="text-lg font-bold text-slate-850">Tamper-Proof Journey Capsules</h3>
+              <p className="text-xs text-slate-500">Cryptographically sealed coordinate captures compiled every 30s.</p>
             </div>
 
             <div className="space-y-2 max-h-[260px] overflow-y-auto pr-1">
               {capsuleSnapshots.slice().reverse().map((capsule, index) => (
-                <div key={index} className="p-3 bg-dark-950/40 border border-gray-800/60 rounded-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 text-xs">
+                <div key={index} className="p-3 glass-item rounded-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 text-xs">
                   <div className="flex items-center gap-2">
                     <Fingerprint className="w-4 h-4 text-brand-500 shrink-0" />
                     <div>
-                      <p className="font-bold text-gray-300">Capsule #{capsuleSnapshots.length - index}</p>
-                      <p className="text-[10px] text-gray-500">{new Date(capsule.timestamp).toLocaleTimeString()}</p>
+                      <p className="font-bold text-slate-700">Capsule #{capsuleSnapshots.length - index}</p>
+                      <p className="text-[10px] text-slate-500">{new Date(capsule.timestamp).toLocaleTimeString()}</p>
                     </div>
                   </div>
 
                   <div className="flex flex-wrap gap-1.5">
-                    {capsule.route_deviation && <span className="px-1.5 py-0.5 bg-red-950/40 text-red-400 rounded text-[9px] font-bold border border-red-500/10">ROUTE DEVIATION</span>}
-                    {capsule.motion_anomaly && <span className="px-1.5 py-0.5 bg-yellow-950/40 text-yellow-400 rounded text-[9px] font-bold border border-yellow-500/10">UNUSUAL STOP</span>}
-                    {capsule.audio_anomaly && <span className="px-1.5 py-0.5 bg-orange-950/40 text-orange-400 rounded text-[9px] font-bold border border-orange-500/10">VOICE DISTRESS</span>}
-                    <span className="px-1.5 py-0.5 bg-emerald-950/20 text-emerald-400 rounded text-[9px] font-mono border border-emerald-500/10">SHA: {capsule.integrity_hash.slice(0, 12)}...</span>
+                    {capsule.route_deviation && <span className="px-1.5 py-0.5 bg-red-50 text-red-650 rounded text-[9px] font-bold border border-red-200">ROUTE DEVIATION</span>}
+                    {capsule.motion_anomaly && <span className="px-1.5 py-0.5 bg-yellow-50 text-yellow-650 rounded text-[9px] font-bold border border-yellow-200">UNUSUAL STOP</span>}
+                    {capsule.audio_anomaly && <span className="px-1.5 py-0.5 bg-orange-50 text-orange-650 rounded text-[9px] font-bold border border-orange-200">VOICE DISTRESS</span>}
+                    <span className="px-1.5 py-0.5 bg-emerald-50 text-emerald-600 rounded text-[9px] font-mono border border-emerald-200">SHA: {capsule.integrity_hash.slice(0, 12)}...</span>
                   </div>
                 </div>
               ))}
-              
               {capsuleSnapshots.length === 0 && (
                 <div className="py-8 text-center text-xs text-gray-500">
                   Waiting for first capsule compilation...
@@ -310,20 +308,19 @@ export const ActiveJourneyPage: React.FC = () => {
 
         {/* Right Side: Simulation Panel & Controls */}
         <div className="space-y-6">
-          
           {/* Active Simulators */}
-          <div className="glass-card p-6 rounded-2xl border border-gray-800 space-y-4 bg-gradient-to-b from-dark-900 to-brand-950/5">
+          <div className="glass-card p-6 space-y-4">
             <div className="flex justify-between items-center">
-              <h3 className="text-sm font-bold text-white">Simulation Controller</h3>
+              <h3 className="text-sm font-bold text-slate-800">Simulation Controller</h3>
               <button
                 onClick={() => setSimRunning(!simRunning)}
-                className={`p-1.5 rounded-lg border transition ${simRunning ? 'bg-brand-500/15 border-brand-500/20 text-brand-400' : 'bg-gray-800 border-gray-700 text-gray-400'}`}
+                className={`p-1.5 rounded-lg border transition ${simRunning ? 'bg-brand-500/15 border-brand-500/20 text-brand-500' : 'bg-slate-100 border-slate-250 text-slate-500'}`}
               >
                 {simRunning ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
               </button>
             </div>
             
-            <p className="text-xs text-gray-400 leading-normal">
+            <p className="text-xs text-slate-500 leading-normal">
               Select a simulated travel scenario below. Our background runner will inject telemetry anomalies to verify platform alert behaviors:
             </p>
 
@@ -331,7 +328,7 @@ export const ActiveJourneyPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setSelectedSimType('normal')}
-                className={`p-3 border rounded-xl text-xs text-left font-semibold transition ${selectedSimType === 'normal' ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' : 'bg-dark-950/40 border-gray-800 text-gray-400 hover:border-gray-700'}`}
+                className={`p-3 border rounded-xl text-xs text-left font-semibold transition ${selectedSimType === 'normal' ? 'bg-emerald-50 border-emerald-500/30 text-emerald-700' : 'bg-white/40 border-white/50 text-slate-600 hover:border-slate-300'}`}
               >
                 🟢 Standard Journey Progress
               </button>
@@ -339,7 +336,7 @@ export const ActiveJourneyPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setSelectedSimType('deviation')}
-                className={`p-3 border rounded-xl text-xs text-left font-semibold transition ${selectedSimType === 'deviation' ? 'bg-red-500/10 border-red-500/30 text-red-400' : 'bg-dark-950/40 border-gray-800 text-gray-400 hover:border-gray-700'}`}
+                className={`p-3 border rounded-xl text-xs text-left font-semibold transition ${selectedSimType === 'deviation' ? 'bg-red-50 border-red-500/30 text-red-700' : 'bg-white/40 border-white/50 text-slate-600 hover:border-slate-300'}`}
               >
                 🔴 Simulate Wrong Turn / Off-Route
               </button>
@@ -347,7 +344,7 @@ export const ActiveJourneyPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setSelectedSimType('stop')}
-                className={`p-3 border rounded-xl text-xs text-left font-semibold transition ${selectedSimType === 'stop' ? 'bg-yellow-500/10 border-yellow-500/30 text-yellow-400' : 'bg-dark-950/40 border-gray-800 text-gray-400 hover:border-gray-700'}`}
+                className={`p-3 border rounded-xl text-xs text-left font-semibold transition ${selectedSimType === 'stop' ? 'bg-yellow-50 border-yellow-500/30 text-yellow-750' : 'bg-white/40 border-white/50 text-slate-600 hover:border-slate-300'}`}
               >
                 🟡 Simulate Unexpected / Isolated Stop
               </button>
@@ -355,7 +352,7 @@ export const ActiveJourneyPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setSelectedSimType('scream')}
-                className={`p-3 border rounded-xl text-xs text-left font-semibold transition ${selectedSimType === 'scream' ? 'bg-orange-500/10 border-orange-500/30 text-orange-400' : 'bg-dark-950/40 border-gray-800 text-gray-400 hover:border-gray-700'}`}
+                className={`p-3 border rounded-xl text-xs text-left font-semibold transition ${selectedSimType === 'scream' ? 'bg-orange-50 border-orange-500/30 text-orange-700' : 'bg-white/40 border-white/50 text-slate-600 hover:border-slate-300'}`}
               >
                 🟠 Simulate Vocal Screaming / Distress
               </button>
@@ -365,7 +362,7 @@ export const ActiveJourneyPage: React.FC = () => {
           {/* Quick SOS Trigger Button */}
           <button
             onClick={handleSOS}
-            className="w-full py-4 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl transition duration-150 shadow-lg"
+            className="w-full py-4 bg-red-650 hover:bg-red-750 text-white font-bold rounded-xl transition duration-150 shadow-lg"
           >
             Trigger Instant SOS Emergency
           </button>
@@ -373,7 +370,7 @@ export const ActiveJourneyPage: React.FC = () => {
           {/* Reached Safely / Stop Shield Action */}
           <button
             onClick={handleComplete}
-            className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition duration-150 shadow-md flex items-center justify-center gap-2"
+            className="w-full py-3 bg-emerald-650 hover:bg-emerald-755 text-white font-bold rounded-xl transition duration-150 shadow-md flex items-center justify-center gap-2"
           >
             <CheckCircle2 className="w-4 h-4" />
             Stop Shield (Reached Safely)
@@ -382,12 +379,11 @@ export const ActiveJourneyPage: React.FC = () => {
           {/* Monitor Cleanup Action */}
           <button
             onClick={handleCancel}
-            className="w-full py-3 bg-dark-950 hover:bg-dark-900 border border-gray-800 text-xs font-bold text-gray-400 hover:text-white rounded-xl transition duration-150 flex items-center justify-center gap-2"
+            className="w-full py-3 bg-white/40 hover:bg-white/60 border border-white/45 text-xs font-bold text-slate-605 rounded-xl transition duration-150 flex items-center justify-center gap-2"
           >
-            <Trash2 className="w-4 h-4 text-gray-500" />
+            <Trash2 className="w-4 h-4 text-slate-500" />
             Decommission Tracking
           </button>
-
         </div>
       </div>
     </div>

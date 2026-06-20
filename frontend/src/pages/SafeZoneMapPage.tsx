@@ -138,34 +138,34 @@ export const SafeZoneMapPage: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1 min-h-[500px]">
         
         {/* Left column: Add Safe Zone form */}
-        <div className="glass-card p-6 rounded-2xl border border-gray-800 space-y-4 h-fit">
-          <h3 className="text-base font-bold text-white flex items-center gap-2">
+        <div className="glass-card p-6 space-y-4 h-fit">
+          <h3 className="text-base font-bold text-[#0F172A] flex items-center gap-2">
             <Plus className="w-5 h-5 text-brand-500" />
             Contribute Safe Zone
           </h3>
-          <p className="text-xs text-gray-400 leading-normal">
+          <p className="text-xs text-slate-500 leading-normal">
             Fill the details below. 💡 <strong>Tip:</strong> Click anywhere on the map to pre-populate coordinates.
           </p>
 
           <form onSubmit={handleSubmit} className="space-y-3.5">
             <div>
-              <label className="block text-[9px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Safe Zone Name</label>
+              <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Safe Zone Name</label>
               <input
                 type="text"
                 placeholder="E.g., Koramangala Police Station"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full bg-dark-950 border border-gray-800 focus:border-brand-500/40 rounded-xl py-2 px-4 text-white text-xs outline-none transition"
+                className="w-full glass-input rounded-xl py-2 px-4 text-xs"
                 required
               />
             </div>
 
             <div>
-              <label className="block text-[9px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Category</label>
+              <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Category</label>
               <select
                 value={type}
                 onChange={(e) => setType(e.target.value)}
-                className="w-full bg-dark-950 border border-gray-800 focus:border-brand-500/40 rounded-xl py-2 px-4 text-white text-xs outline-none transition"
+                className="w-full glass-input rounded-xl py-2 px-4 text-xs"
               >
                 <option value="police">👮 Police Station / Checkpoint</option>
                 <option value="hospital">🏥 Hospital / 24h Clinic</option>
@@ -177,39 +177,39 @@ export const SafeZoneMapPage: React.FC = () => {
 
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <label className="block text-[9px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Latitude</label>
+                <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Latitude</label>
                 <input
                   type="number"
                   step="any"
                   placeholder="Click Map"
                   value={lat}
                   onChange={(e) => setLat(e.target.value === '' ? '' : Number(e.target.value))}
-                  className="w-full bg-dark-950 border border-gray-800 focus:border-brand-500/40 rounded-xl py-2 px-2 text-white text-xs outline-none text-center transition"
+                  className="w-full glass-input rounded-xl py-2 px-2 text-xs text-center"
                   required
                 />
               </div>
               <div>
-                <label className="block text-[9px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Longitude</label>
+                <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Longitude</label>
                 <input
                   type="number"
                   step="any"
                   placeholder="Click Map"
                   value={lng}
                   onChange={(e) => setLng(e.target.value === '' ? '' : Number(e.target.value))}
-                  className="w-full bg-dark-950 border border-gray-800 focus:border-brand-500/40 rounded-xl py-2 px-2 text-white text-xs outline-none text-center transition"
+                  className="w-full glass-input rounded-xl py-2 px-2 text-xs text-center"
                   required
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-[9px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Short Description</label>
+              <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Short Description</label>
               <textarea
                 rows={2}
                 placeholder="E.g., Open 24h, active guards, streetlights present..."
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                className="w-full bg-dark-950 border border-gray-800 focus:border-brand-500/40 rounded-xl p-3 text-xs outline-none text-white transition"
+                className="w-full glass-input rounded-xl p-3 text-xs"
                 required
               />
             </div>
@@ -225,7 +225,7 @@ export const SafeZoneMapPage: React.FC = () => {
         </div>
 
         {/* Right column: Interactive Map */}
-        <div className="lg:col-span-2 relative rounded-2xl overflow-hidden border border-gray-800 shadow-xl bg-dark-900 min-h-[450px]">
+        <div className="lg:col-span-2 relative rounded-2xl overflow-hidden border border-white/20 shadow-xl bg-white/60 min-h-[450px]">
           <MapContainer 
             center={[12.9716, 77.5946]} 
             zoom={13} 

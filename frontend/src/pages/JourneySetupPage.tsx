@@ -142,18 +142,18 @@ export const JourneySetupPage: React.FC = () => {
       <div className="flex items-center gap-3">
         <button
           onClick={() => navigate('/dashboard')}
-          className="p-2 bg-dark-900 border border-gray-800 rounded-xl hover:text-white transition"
+          className="p-2 bg-white border border-slate-200 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition shadow-sm"
         >
           <ArrowLeft className="w-4 h-4" />
         </button>
         <div>
-          <h2 className="text-xl font-black text-white">Manual Journey Setup</h2>
-          <p className="text-xs text-gray-400">Establish expected path constraints and start invisible shield.</p>
+          <h2 className="text-xl font-black text-slate-800">Manual Journey Setup</h2>
+          <p className="text-xs text-slate-500 font-medium">Establish expected path constraints and start active shield monitoring.</p>
         </div>
       </div>
 
       {error && (
-        <div className="p-3 bg-red-950/20 border border-red-500/30 text-red-400 text-xs rounded-xl flex gap-2 items-start">
+        <div className="p-3 bg-red-50 border border-red-100 text-red-700 text-xs rounded-xl flex gap-2 items-start shadow-sm">
           <Info className="w-4 h-4 shrink-0 mt-0.5" />
           <span>{error}</span>
         </div>
@@ -163,19 +163,19 @@ export const JourneySetupPage: React.FC = () => {
         type="button"
         onClick={handleSimulateCabBooking}
         disabled={loading}
-        className="w-full py-4 bg-gradient-to-r from-brand-600 to-brand-400 hover:from-brand-700 hover:to-brand-500 text-white font-extrabold rounded-2xl shadow-lg shadow-brand-500/10 transition flex items-center justify-center gap-2 group text-sm"
+        className="w-full py-4 bg-gradient-to-r from-brand-600 to-brand-400 hover:from-brand-700 hover:to-brand-500 text-white font-extrabold rounded-2xl shadow-md transition flex items-center justify-center gap-2 group text-sm"
       >
         <Compass className="w-5 h-5 text-white animate-pulse" />
         Simulate Cab Booking (Auto-Start Guardian Mode)
       </button>
 
       {/* Preset Route Selectors */}
-      <div className="glass-card p-5 rounded-2xl border border-gray-800 space-y-3">
-        <h4 className="text-xs font-bold text-brand-400 uppercase tracking-widest flex items-center gap-1.5">
+      <div className="glass-card p-5 space-y-3">
+        <h4 className="text-xs font-bold text-brand-650 uppercase tracking-widest flex items-center gap-1.5">
           <Compass className="w-4 h-4" />
           Quick Simulation presets
         </h4>
-        <p className="text-xs text-gray-400 leading-normal">
+        <p className="text-xs text-slate-500 font-medium leading-normal">
           Click any preset route below to pre-populate exact coordinate geometry matching the routing simulators:
         </p>
         <div className="grid grid-cols-1 gap-2">
@@ -184,36 +184,36 @@ export const JourneySetupPage: React.FC = () => {
               key={idx}
               type="button"
               onClick={() => handleApplyPreset(idx)}
-              className="p-3 bg-dark-950/60 hover:bg-dark-900 border border-gray-800 hover:border-brand-500/30 text-xs text-gray-300 font-semibold rounded-xl text-left transition duration-150 flex justify-between items-center"
+              className="p-3 glass-item hover:border-brand-500/20 text-xs text-slate-700 font-semibold rounded-xl text-left transition duration-150 flex justify-between items-center shadow-sm"
             >
               <span>{preset.name}</span>
-              <MapPin className="w-3.5 h-3.5 text-brand-500" />
+              <MapPin className="w-3.5 h-3.5 text-brand-600" />
             </button>
           ))}
         </div>
       </div>
 
       {/* Main Form */}
-      <form onSubmit={handleStart} className="glass-card p-6 rounded-2xl border border-gray-800 space-y-5">
+      <form onSubmit={handleStart} className="glass-card p-6 space-y-5">
         
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">Cab Plate Number</label>
+            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Cab Plate Number</label>
             <input
               type="text"
               placeholder="KA-03-MM-1122"
               value={cabNumber}
               onChange={(e) => setCabNumber(e.target.value)}
-              className="w-full bg-dark-950 border border-gray-800 focus:border-brand-500/40 rounded-xl py-3 px-4 text-white text-sm outline-none transition"
+              className="w-full glass-input rounded-xl py-3 px-4 text-slate-800 text-sm outline-none transition"
               required
             />
           </div>
           <div>
-            <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">Service Provider</label>
+            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Service Provider</label>
             <select
               value={provider}
               onChange={(e) => setProvider(e.target.value)}
-              className="w-full bg-dark-950 border border-gray-800 focus:border-brand-500/40 rounded-xl py-3 px-4 text-white text-sm outline-none transition"
+              className="w-full glass-input rounded-xl py-3 px-4 text-slate-800 text-sm outline-none transition"
             >
               <option value="uber">Uber</option>
               <option value="ola">Ola</option>
@@ -223,29 +223,29 @@ export const JourneySetupPage: React.FC = () => {
           </div>
         </div>
 
-        <div className="border-t border-gray-800 pt-4 space-y-4">
-          <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Commute Details</h4>
+        <div className="border-t border-slate-100 pt-4 space-y-4">
+          <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">Commute Details</h4>
           
           <div>
-            <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Pickup Location Address</label>
+            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Pickup Location Address</label>
             <input
               type="text"
               placeholder="E.g., Koramangala 4th Block, Bengaluru"
               value={pickupAddress}
               onChange={(e) => setPickupAddress(e.target.value)}
-              className="w-full bg-dark-950 border border-gray-800 focus:border-brand-500/40 rounded-xl py-3 px-4 text-white text-xs outline-none transition"
+              className="w-full glass-input rounded-xl py-3 px-4 text-slate-800 text-xs outline-none transition"
               required
             />
           </div>
 
           <div>
-            <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Destination Address</label>
+            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Destination Address</label>
             <input
               type="text"
               placeholder="E.g., Indiranagar Double Road, Bengaluru"
               value={destAddress}
               onChange={(e) => setDestAddress(e.target.value)}
-              className="w-full bg-dark-950 border border-gray-800 focus:border-brand-500/40 rounded-xl py-3 px-4 text-white text-xs outline-none transition"
+              className="w-full glass-input rounded-xl py-3 px-4 text-slate-800 text-xs outline-none transition"
               required
             />
           </div>
@@ -254,10 +254,10 @@ export const JourneySetupPage: React.FC = () => {
         <button
           type="submit"
           disabled={loading}
-          className="w-full py-3.5 bg-brand-600 hover:bg-brand-700 disabled:bg-gray-800 disabled:text-gray-500 text-white font-bold rounded-xl transition duration-200 shadow-lg flex items-center justify-center gap-2"
+          className="w-full py-3.5 bg-brand-650 hover:bg-brand-700 disabled:bg-slate-200 disabled:text-slate-400 text-white font-bold rounded-xl transition duration-200 shadow-md flex items-center justify-center gap-2"
         >
           {loading ? 'Fetching Safe Route Geometry...' : 'Initiate Active Journey Shield'}
-          <Play className="w-3.5 h-3.5 fill-white" />
+          <Play className="w-3.5 h-3.5 fill-white text-white" />
         </button>
       </form>
     </div>

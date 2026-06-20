@@ -68,35 +68,34 @@ export const ProfilePage: React.FC = () => {
           <span>{error}</span>
         </div>
       )}
-
       <form onSubmit={handleSave} className="grid grid-cols-1 md:grid-cols-3 gap-6">
         
         {/* Basic settings */}
-        <div className="glass-card p-6 rounded-2xl border border-gray-800 space-y-4 h-fit">
-          <h3 className="text-base font-bold text-white flex items-center gap-2">
+        <div className="glass-card p-6 space-y-4 h-fit">
+          <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
             <User className="w-5 h-5 text-brand-500" />
             Identity Card
           </h3>
 
           <div className="space-y-3.5">
             <div>
-              <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Phone Number (Verified)</label>
+              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Phone Number (Verified)</label>
               <input
                 type="text"
                 value={user?.phone || ''}
-                className="w-full bg-dark-950 border border-gray-800 rounded-xl py-2.5 px-4 text-gray-500 text-xs outline-none select-none cursor-not-allowed font-mono"
+                className="w-full bg-white/30 border border-slate-200 rounded-xl py-2.5 px-4 text-slate-500 text-xs outline-none select-none cursor-not-allowed font-mono"
                 disabled
               />
             </div>
 
             <div>
-              <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Full Name</label>
+              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Full Name</label>
               <input
                 type="text"
                 placeholder="E.g., Ananya Sharma"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full bg-dark-950 border border-gray-800 focus:border-brand-500/40 rounded-xl py-2.5 px-4 text-white text-xs outline-none transition"
+                className="w-full glass-input rounded-xl py-2.5 px-4 text-xs"
                 required
               />
             </div>
@@ -104,29 +103,29 @@ export const ProfilePage: React.FC = () => {
         </div>
 
         {/* Emergency medical settings */}
-        <div className="md:col-span-2 glass-card p-6 rounded-2xl border border-gray-800 space-y-5">
-          <h3 className="text-base font-bold text-white flex items-center gap-2">
+        <div className="md:col-span-2 glass-card p-6 space-y-5">
+          <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
             <Heart className="w-5 h-5 text-brand-500 fill-brand-500/10" />
             First Responder Emergency Card
           </h3>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Blood Group</label>
+              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Blood Group</label>
               <input
                 type="text"
                 placeholder="E.g., O-positive"
                 value={bloodGroup}
                 onChange={(e) => setBloodGroup(e.target.value)}
-                className="w-full bg-dark-950 border border-gray-800 focus:border-brand-500/40 rounded-xl py-2.5 px-4 text-white text-xs outline-none transition"
+                className="w-full glass-input rounded-xl py-2.5 px-4 text-xs"
               />
             </div>
             <div>
-              <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Cab Provider Preference</label>
+              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Cab Provider Preference</label>
               <select
                 value={cabPreference}
                 onChange={(e) => setCabPreference(e.target.value)}
-                className="w-full bg-dark-950 border border-gray-800 focus:border-brand-500/40 rounded-xl py-2.5 px-4 text-white text-xs outline-none transition"
+                className="w-full glass-input rounded-xl py-2.5 px-4 text-xs"
               >
                 <option value="Uber">Uber</option>
                 <option value="Ola">Ola</option>
@@ -136,24 +135,24 @@ export const ProfilePage: React.FC = () => {
           </div>
 
           <div>
-            <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Medical Conditions & Allergies</label>
+            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Medical Conditions & Allergies</label>
             <textarea
               rows={2}
               placeholder="E.g., Penicillin allergy, diabetic, wears contact lenses..."
               value={medicalInfo}
               onChange={(e) => setMedicalInfo(e.target.value)}
-              className="w-full bg-dark-950 border border-gray-800 focus:border-brand-500/40 rounded-xl p-3 text-xs outline-none text-white transition"
+              className="w-full glass-input rounded-xl p-3 text-xs"
             />
           </div>
 
           <div>
-            <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Emergency Card Notes (Visible during SOS)</label>
+            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Emergency Card Notes (Visible during SOS)</label>
             <textarea
               rows={3}
               placeholder="Describe primary instructions (e.g., call Dad first at +91 99999 88888, my medical details are logged above)..."
               value={emergencyCard}
               onChange={(e) => setEmergencyCard(e.target.value)}
-              className="w-full bg-dark-950 border border-gray-800 focus:border-brand-500/40 rounded-xl p-3 text-xs outline-none text-white transition"
+              className="w-full glass-input rounded-xl p-3 text-xs"
             />
           </div>
 

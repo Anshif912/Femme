@@ -224,58 +224,83 @@ export const RouteViewPage: React.FC = () => {
       
       {/* Route Scorer Banner */}
       {journeyToUse && (
-        <div className={`p-4 border rounded-2xl flex items-start sm:items-center gap-3.5 shadow-md ${
-          safetyEvaluation.status === 'green' ? 'bg-emerald-950/20 border-emerald-500/25 glow-green' :
-          safetyEvaluation.status === 'amber' ? 'bg-amber-950/20 border-amber-500/25 glow-amber' :
-          'bg-rose-950/20 border-rose-500/25 glow-rose'
+        <div className={`p-4 border rounded-2xl flex items-start sm:items-center gap-3.5 shadow-sm transition backdrop-blur-md ${
+          safetyEvaluation.status === 'green' ? 'bg-emerald-50/80 border-emerald-500/20 text-emerald-800' :
+          safetyEvaluation.status === 'amber' ? 'bg-amber-50/80 border-amber-500/20 text-amber-800' :
+          'bg-rose-50/80 border-rose-500/20 text-rose-800'
         }`}>
           <div className={`p-2.5 rounded-xl ${
-            safetyEvaluation.status === 'green' ? 'bg-emerald-500/10 text-emerald-400' :
-            safetyEvaluation.status === 'amber' ? 'bg-amber-500/10 text-amber-400' :
-            'bg-rose-500/10 text-rose-400'
+            safetyEvaluation.status === 'green' ? 'bg-emerald-500/10 text-emerald-600' :
+            safetyEvaluation.status === 'amber' ? 'bg-amber-500/10 text-amber-600' :
+            'bg-rose-500/10 text-rose-600'
           }`}>
             {safetyEvaluation.status === 'green' ? <ShieldCheck className="w-6 h-6" /> : <ShieldAlert className="w-6 h-6" />}
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-xs font-bold uppercase tracking-wider text-gray-400">Route Safety Score:</span>
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Route Safety Score:</span>
               <span className={`text-sm font-black ${
-                safetyEvaluation.status === 'green' ? 'text-emerald-400' :
-                safetyEvaluation.status === 'amber' ? 'text-amber-400' :
-                'text-rose-400'
+                safetyEvaluation.status === 'green' ? 'text-emerald-700' :
+                safetyEvaluation.status === 'amber' ? 'text-amber-700' :
+                'text-rose-700'
               }`}>{safetyEvaluation.score}/100</span>
             </div>
-            <p className="text-xs text-gray-300 mt-1 leading-normal">{safetyEvaluation.reason}</p>
+            <p className="text-xs text-slate-650 mt-1 leading-normal">{safetyEvaluation.reason}</p>
           </div>
         </div>
       )}
 
       {/* AI Safety Route Intelligence Panel */}
-<div className="absolute top-4 left-4 right-4 bg-dark-900/90 backdrop-blur-md border border-gray-800 rounded-xl p-4 flex flex-col md:flex-row gap-4 z-[1000]">
-  {safetyRoutes.map((route) => {
-    const riskLevel = route.score >= 71 ? 'Low' : route.score >= 41 ? 'Medium' : 'High';
-    const bgColor = riskLevel === 'Low' ? 'bg-emerald-900/30 border-emerald-500' :
-                   riskLevel === 'Medium' ? 'bg-amber-900/30 border-amber-500' :
-                   'bg-rose-900/30 border-rose-500';
-    return (
-      <div key={route.type} className={`flex-1 p-3 rounded-lg border ${bgColor} cursor-pointer`} onClick={() => setSelectedRoute(route.type)}>
-        <div className="flex items-center justify-between mb-2">
-          <h3 className="text-sm font-semibold uppercase">{route.type.charAt(0).toUpperCase() + route.type.slice(1)} Route</h3>
-          <span className="text-xs font-bold">{route.score}/100</span>
-        </div>
-        <p className="text-xs text-gray-300">Distance: {(route.distance/1000).toFixed(1)} km</p>
-        <p className="text-xs text-gray-300">Duration: {(route.duration/60).toFixed(0)} min</p>
-        <p className="text-xs text-gray-300">Risk: {riskLevel}</p>
-        <ul className="mt-2 list-disc list-inside text-xs text-gray-400">
-          {route.reasons?.map((r:string,i:number)=> <li key={i}>{r}</li>)}
-        </ul>
-      </div>
-    );
-  })}
-</div>
+      {safetyRoutes.length > 0 && (
+        <div className="glass-card p-4 flex flex-col md:flex-row gap-4">
+          {safetyRoutes.map((route) => {
+            const riskLevel = route.score >= 71 ? 'Low' : route.score >= 41 ? 'Medium' : 'High';
+            const isActive = selectedRoute === route.type;
+            const borderStyle = isActive ? 'border-brand-500 ring-2 ring-brand-500/10' : 'border-white/50 hover:border-slate-300';
+            
+            const riskColorClass = riskLevel === 'Low' ? 'text-emerald-700' :
+                                  riskLevel === 'Medium' ? 'text-amber-700' :
+                                  'text-rose-700';
 
-{/* Map Content Box */}
-      <div className="flex-1 min-h-[450px] relative rounded-2xl overflow-hidden border border-gray-800 shadow-xl bg-dark-900">
+            return (
+              <div 
+                key={route.type} 
+                className={`flex-1 p-4 rounded-2xl border bg-white/50 backdrop-blur-md cursor-pointer transition ${borderStyle}`} 
+                onClick={() => setSelectedRoute(route.type)}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700">{route.type} Route</h3>
+                  <span className={`text-sm font-black ${riskColorClass}`}>{route.score}/100</span>
+                </div>
+                <div className="grid grid-cols-3 gap-1 mb-3 text-[11px] text-slate-500 font-semibold">
+                  <div>
+                    <p className="text-[9px] uppercase tracking-widest text-slate-400">Distance</p>
+                    <p className="text-slate-700">{(route.distance/1000).toFixed(1)} km</p>
+                  </div>
+                  <div>
+                    <p className="text-[9px] uppercase tracking-widest text-slate-400">Duration</p>
+                    <p className="text-slate-700">{(route.duration/60).toFixed(0)} min</p>
+                  </div>
+                  <div>
+                    <p className="text-[9px] uppercase tracking-widest text-slate-400">Risk</p>
+                    <p className={riskColorClass}>{riskLevel}</p>
+                  </div>
+                </div>
+                {route.reasons && route.reasons.length > 0 && (
+                  <ul className="list-disc list-inside text-[11px] text-slate-600 space-y-0.5 border-t border-slate-100 pt-2">
+                    {route.reasons.slice(0, 2).map((r: string, i: number) => (
+                      <li key={i} className="truncate">{r}</li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Map Content Box */}
+      <div className="flex-1 min-h-[450px] relative rounded-2xl overflow-hidden border border-white/60 shadow-xl bg-white/40 backdrop-blur-md">
         
         <MapContainer 
           center={mapCenter} 
@@ -355,7 +380,7 @@ export const RouteViewPage: React.FC = () => {
             <>
               <Marker position={[journeyToUse.pickup_lat, journeyToUse.pickup_lng]} icon={icons.pin}>
                 <Popup>
-                  <div className="text-xs text-gray-900">
+                  <div className="text-xs text-gray-905">
                     <p className="font-bold">Pickup Source</p>
                     <p className="text-gray-500">{journeyToUse.pickup_address}</p>
                   </div>
@@ -363,7 +388,7 @@ export const RouteViewPage: React.FC = () => {
               </Marker>
               <Marker position={[journeyToUse.dest_lat, journeyToUse.dest_lng]} icon={icons.pin}>
                 <Popup>
-                  <div className="text-xs text-gray-900">
+                  <div className="text-xs text-gray-905">
                     <p className="font-bold">Destination</p>
                     <p className="text-gray-500">{journeyToUse.dest_address}</p>
                   </div>
@@ -388,12 +413,12 @@ export const RouteViewPage: React.FC = () => {
 
         {/* Floating Controls Overlay */}
         {!journeyToUse && (
-          <div className="absolute bottom-4 left-4 right-4 bg-dark-900/90 backdrop-blur-md border border-gray-800 p-4 rounded-xl z-[1000] flex flex-col sm:flex-row justify-between items-center gap-3">
+          <div className="absolute bottom-4 left-4 right-4 glass-card p-4 z-[1000] flex flex-col sm:flex-row justify-between items-center gap-3 shadow-lg">
             <div className="flex items-center gap-2">
               <Compass className="w-5 h-5 text-brand-500 animate-spin-slow" />
               <div>
-                <p className="text-xs font-bold text-white">Safety Corridor Explorer</p>
-                <p className="text-[10px] text-gray-400">Centred on your current location.</p>
+                <p className="text-xs font-bold text-slate-800">Safety Corridor Explorer</p>
+                <p className="text-[10px] text-slate-500">Centred on your current location.</p>
               </div>
             </div>
             <button

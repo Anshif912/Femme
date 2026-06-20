@@ -43,53 +43,52 @@ export const AnalyticsPage: React.FC = () => {
         <h2 className="text-2xl font-black text-white">Safety Analytics</h2>
         <p className="text-xs text-gray-400">Weekly safety summaries, shield uptime metrics, and safety score historical trends.</p>
       </div>
-
       {/* Grid of basic stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         
-        <div className="glass-card p-5 rounded-2xl border border-gray-800 flex items-center gap-4">
-          <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-center text-emerald-400">
+        <div className="glass-card p-5 flex items-center gap-4">
+          <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-center text-emerald-600">
             <Shield className="w-5 h-5" />
           </div>
           <div>
-            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block">Average Safety Score</span>
-            <span className="text-2xl font-black text-white">93.1/100</span>
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Average Safety Score</span>
+            <span className="text-2xl font-black text-slate-800">93.1/100</span>
           </div>
         </div>
 
-        <div className="glass-card p-5 rounded-2xl border border-gray-800 flex items-center gap-4">
-          <div className="w-10 h-10 rounded-xl bg-brand-500/10 border border-brand-500/25 flex items-center justify-center text-brand-400">
+        <div className="glass-card p-5 flex items-center gap-4">
+          <div className="w-10 h-10 rounded-xl bg-brand-500/10 border border-brand-500/25 flex items-center justify-center text-brand-600">
             <Clock className="w-5 h-5" />
           </div>
           <div>
-            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block">Shield Uptime</span>
-            <span className="text-2xl font-black text-white">{shieldUptime} <span className="text-xs font-light text-gray-400">mins</span></span>
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Shield Uptime</span>
+            <span className="text-2xl font-black text-slate-800">{shieldUptime} <span className="text-xs font-light text-slate-400">mins</span></span>
           </div>
         </div>
 
-        <div className="glass-card p-5 rounded-2xl border border-gray-800 flex items-center gap-4">
-          <div className="w-10 h-10 rounded-xl bg-red-500/10 border border-red-500/25 flex items-center justify-center text-red-400">
+        <div className="glass-card p-5 flex items-center gap-4">
+          <div className="w-10 h-10 rounded-xl bg-red-500/10 border border-red-500/25 flex items-center justify-center text-red-600">
             <AlertTriangle className="w-5 h-5" />
           </div>
           <div>
-            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block">Critical SOS Triggers</span>
-            <span className="text-2xl font-black text-white">{anomalyCount}</span>
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Critical SOS Triggers</span>
+            <span className="text-2xl font-black text-slate-800">{anomalyCount}</span>
           </div>
         </div>
 
       </div>
 
       {/* Weekly Safety Score Bar Chart (Premium Custom HTML/CSS build!) */}
-      <div className="glass-card p-6 rounded-2xl border border-gray-800 space-y-6">
+      <div className="glass-card p-6 space-y-6">
         <div>
-          <span className="text-xs font-bold text-brand-400 tracking-widest uppercase mb-0.5 block">Commute Safety Trend</span>
-          <h3 className="text-base font-bold text-white">Safety Score Index (Last 7 Days)</h3>
+          <span className="text-xs font-bold text-brand-500 tracking-widest uppercase mb-0.5 block">Commute Safety Trend</span>
+          <h3 className="text-base font-bold text-slate-800">Safety Score Index (Last 7 Days)</h3>
         </div>
 
-        <div className="h-64 flex items-end gap-3 sm:gap-6 border-b border-gray-900 pb-3 pr-2">
+        <div className="h-64 flex items-end gap-3 sm:gap-6 border-b border-slate-200 pb-3 pr-2">
           
           {/* Y Axis descriptors */}
-          <div className="flex flex-col justify-between h-full text-[9px] text-gray-500 font-bold w-6 shrink-0 select-none pb-2">
+          <div className="flex flex-col justify-between h-full text-[9px] text-slate-500 font-bold w-6 shrink-0 select-none pb-2">
             <span>100</span>
             <span>75</span>
             <span>50</span>
@@ -104,7 +103,7 @@ export const AnalyticsPage: React.FC = () => {
               <div key={index} className="flex-1 flex flex-col items-center gap-2 group h-full justify-end relative">
                 
                 {/* Score hover tooltip */}
-                <div className="absolute top-[-25px] bg-dark-900 border border-gray-800 text-[10px] px-2 py-0.5 rounded font-black text-white opacity-0 group-hover:opacity-100 transition-opacity duration-150 pointer-events-none">
+                <div className="absolute top-[-25px] bg-white border border-slate-200 text-[10px] px-2 py-0.5 rounded font-black text-slate-800 opacity-0 group-hover:opacity-100 transition-opacity duration-150 pointer-events-none shadow-md">
                   {dayData.score}%
                 </div>
 
@@ -119,13 +118,13 @@ export const AnalyticsPage: React.FC = () => {
                 />
                 
                 {/* X axis tag */}
-                <span className="text-[10px] font-bold text-gray-400 select-none">{dayData.day}</span>
+                <span className="text-[10px] font-bold text-slate-500 select-none">{dayData.day}</span>
               </div>
             );
           })}
         </div>
 
-        <div className="grid grid-cols-2 gap-4 text-xs text-gray-400 border-t border-gray-900 pt-4">
+        <div className="grid grid-cols-2 gap-4 text-xs text-slate-500 border-t border-slate-200 pt-4">
           <div className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block"></span>
             <span>Safe Travel (&gt;90)</span>

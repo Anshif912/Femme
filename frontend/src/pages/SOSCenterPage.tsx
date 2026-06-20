@@ -213,10 +213,28 @@ export const SOSCenterPage: React.FC = () => {
   const lat = activeJourney?.current_lat || 12.9716;
   const lng = activeJourney?.current_lng || 77.5946;
   const cabNumber = activeJourney?.cab_number || "EMERGENCY_SOS";
-  const mapsLink = `https://maps.google.com/?q=${lat},${lng}`;
+const mapsLink = `https://maps.google.com/?q=${lat},${lng}`;
   const timestamp = new Date().toISOString();
 
   const emergencyMessage = `🚨 FEMME EMERGENCY ALERT\n\nUser: ${userName}\n\nLocation:\n${mapsLink}\n\nCab:\n${cabNumber}\n\nTimestamp:\n${timestamp}\n\nPossible emergency detected.`;
+
+  const toggleSiren = async () => {
+    const nextState = !sirenPlaying;
+    setSirenPlaying(nextState);
+    if (nextState) {
+      try {
+        if (!audioCtxRef.current) {
+          const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+          audioCtxRef.current = new AudioContextClass();
+        }
+        if (audioCtxRef.current.state === 'suspended') {
+          await audioCtxRef.current.resume();
+        }
+      } catch (err) {
+        console.error("Failed to resume context on gesture:", err);
+      }
+    }
+  };
 
   return (
     <div className={`min-h-[80vh] rounded-3xl p-8 transition-all duration-300 bg-white/70 backdrop-blur-xl border ${
@@ -225,7 +243,7 @@ export const SOSCenterPage: React.FC = () => {
       
       {/* Blinking SOS Alert Icon */}
       <div className={`w-20 h-20 rounded-full flex items-center justify-center transition-all duration-300 ${
-        blinkingState ? 'bg-red-600 shadow-[0_0_24px_rgba(220,38,38,0.35)] scale-105' : 'bg-red-500 shadow-sm'
+        blinkingState ? 'bg-red-650 shadow-[0_0_24px_rgba(220,38,38,0.35)] scale-105' : 'bg-red-500 shadow-sm'
       }`}>
         <ShieldAlert className="w-10 h-10 text-white" />
       </div>
@@ -238,8 +256,8 @@ export const SOSCenterPage: React.FC = () => {
       </div>
 
       {/* Emergency Progress Checklist */}
-      <div className="bg-white/80 border border-slate-100 rounded-2xl p-6 w-full max-w-md text-left space-y-4 shadow-sm">
-        <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest border-b border-slate-50 pb-2 mb-1">
+      <div className="bg-white/40 border border-white/50 rounded-2xl p-6 w-full max-w-md text-left space-y-4 shadow-sm">
+        <h4 className="text-[10px] font-bold text-slate-455 uppercase tracking-widest border-b border-slate-100/50 pb-2 mb-1">
           Emergency Checklist Actions
         </h4>
         
@@ -248,85 +266,85 @@ export const SOSCenterPage: React.FC = () => {
           <div className="flex items-center justify-between text-slate-700">
             <div className="flex items-center gap-2.5">
               {steps.emergencyActivated ? (
-                <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span>
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block"></span>
               ) : (
                 <Loader2 className="w-3.5 h-3.5 text-red-500 animate-spin" />
               )}
-              <span className={steps.emergencyActivated ? 'text-slate-900 font-bold' : 'text-slate-400'}>Emergency Activation</span>
+              <span className={steps.emergencyActivated ? 'text-slate-800 font-bold' : 'text-slate-500'}>Emergency Activation</span>
             </div>
-            {steps.emergencyActivated && <span className="text-emerald-600 text-[10px] font-bold tracking-wide bg-emerald-50 px-2 py-0.5 rounded-full">ACTIVE</span>}
+            {steps.emergencyActivated && <span className="text-emerald-700 text-[10px] font-bold tracking-wide bg-emerald-50 px-2 py-0.5 rounded-full">ACTIVE</span>}
           </div>
 
           {/* SMS dispatch status from provider logs */}
           <div className="flex items-center justify-between text-slate-700">
             <div className="flex items-center gap-2.5">
               {steps.smsSent ? (
-                <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span>
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block"></span>
               ) : (
                 <Loader2 className="w-3.5 h-3.5 text-red-500 animate-spin" />
               )}
-              <span className={steps.smsSent ? 'text-slate-900 font-bold' : 'text-slate-400'}>Guardian SMS Broadcast</span>
+              <span className={steps.smsSent ? 'text-slate-800 font-bold' : 'text-slate-500'}>Guardian SMS Broadcast</span>
             </div>
-            {steps.smsSent && <span className="text-emerald-600 text-[10px] font-bold tracking-wide bg-emerald-50 px-2 py-0.5 rounded-full">DISPATCHED</span>}
+            {steps.smsSent && <span className="text-emerald-700 text-[10px] font-bold tracking-wide bg-emerald-50 px-2 py-0.5 rounded-full">DISPATCHED</span>}
           </div>
 
           {/* Call connection status from provider logs */}
           <div className="flex items-center justify-between text-slate-700">
             <div className="flex items-center gap-2.5">
               {steps.callInitiated ? (
-                <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span>
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block"></span>
               ) : (
                 <Loader2 className="w-3.5 h-3.5 text-red-500 animate-spin" />
               )}
-              <span className={steps.callInitiated ? 'text-slate-900 font-bold' : 'text-slate-400'}>Priority Voice Connection</span>
+              <span className={steps.callInitiated ? 'text-slate-800 font-bold' : 'text-slate-500'}>Priority Voice Connection</span>
             </div>
-            {steps.callInitiated && <span className="text-emerald-600 text-[10px] font-bold tracking-wide bg-emerald-50 px-2 py-0.5 rounded-full">CONNECTED</span>}
+            {steps.callInitiated && <span className="text-emerald-700 text-[10px] font-bold tracking-wide bg-emerald-50 px-2 py-0.5 rounded-full">CONNECTED</span>}
           </div>
 
           {/* GPS streaming status */}
           <div className="flex items-center justify-between text-slate-700">
             <div className="flex items-center gap-2.5">
               {steps.liveTrackingActive ? (
-                <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span>
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block"></span>
               ) : (
                 <Loader2 className="w-3.5 h-3.5 text-red-500 animate-spin" />
               )}
-              <span className={steps.liveTrackingActive ? 'text-slate-900 font-bold' : 'text-slate-400'}>Live Telemetry Stream</span>
+              <span className={steps.liveTrackingActive ? 'text-slate-800 font-bold' : 'text-slate-500'}>Live Telemetry Stream</span>
             </div>
-            {steps.liveTrackingActive && <span className="text-emerald-600 text-[10px] font-bold tracking-wide bg-emerald-50 px-2 py-0.5 rounded-full">LIVE</span>}
+            {steps.liveTrackingActive && <span className="text-emerald-700 text-[10px] font-bold tracking-wide bg-emerald-50 px-2 py-0.5 rounded-full">LIVE</span>}
           </div>
 
           {/* Evidence lock status */}
           <div className="flex items-center justify-between text-slate-700">
             <div className="flex items-center gap-2.5">
               {steps.evidenceLocked ? (
-                <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span>
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block"></span>
               ) : (
                 <Loader2 className="w-3.5 h-3.5 text-red-500 animate-spin" />
               )}
-              <span className={steps.evidenceLocked ? 'text-slate-900 font-bold' : 'text-slate-400'}>Evidence Capsules Sealed</span>
+              <span className={steps.evidenceLocked ? 'text-slate-800 font-bold' : 'text-slate-500'}>Evidence Capsules Sealed</span>
             </div>
-            {steps.evidenceLocked && <span className="text-emerald-600 text-[10px] font-bold tracking-wide bg-emerald-50 px-2 py-0.5 rounded-full">LOCKED</span>}
+            {steps.evidenceLocked && <span className="text-emerald-700 text-[10px] font-bold tracking-wide bg-emerald-50 px-2 py-0.5 rounded-full">LOCKED</span>}
           </div>
 
           {/* Guardian acknowledgement check status */}
           <div className="flex items-center justify-between text-slate-700">
             <div className="flex items-center gap-2.5">
               {hasAcknowledged ? (
-                <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-pulse"></span>
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block animate-pulse"></span>
               ) : (
                 <Loader2 className="w-3.5 h-3.5 text-amber-500 animate-spin" />
               )}
-              <span className={hasAcknowledged ? 'text-emerald-600 font-bold' : 'text-slate-400'}>Guardian Acknowledgment</span>
+              <span className={hasAcknowledged ? 'text-emerald-700 font-bold' : 'text-slate-500'}>Guardian Acknowledgment</span>
             </div>
-            <span className={`text-[10px] font-bold tracking-wide px-2 py-0.5 rounded-full ${hasAcknowledged ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}`}>
+            <span className={`text-[10px] font-bold tracking-wide px-2 py-0.5 rounded-full ${hasAcknowledged ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
               {hasAcknowledged ? 'RECEIVED' : 'WAITING'}
             </span>
           </div>
         </div>
 
         {steps.emergencyTimestamp && (
-          <div className="border-t border-slate-100 pt-2.5 mt-2.5 flex justify-between items-center text-[9px] text-slate-400 font-mono">
+          <div className="border-t border-slate-100 pt-2.5 mt-2.5 flex justify-between items-center text-[9px] text-slate-500 font-mono">
             <span>EMERGENCY TIMESTAMP:</span>
             <span>{steps.emergencyTimestamp}</span>
           </div>
@@ -336,9 +354,9 @@ export const SOSCenterPage: React.FC = () => {
       {/* Audio Siren Toggles */}
       <div className="flex gap-2.5">
         <button
-          onClick={() => setSirenPlaying(!sirenPlaying)}
+          onClick={toggleSiren}
           className={`px-5 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 transition duration-200 shadow-sm border ${
-            sirenPlaying ? 'bg-red-50 border-red-200 text-red-600 hover:bg-red-100' : 'bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200'
+            sirenPlaying ? 'bg-red-50 border-red-200 text-red-700 hover:bg-red-100/80' : 'bg-white/50 border border-white/60 text-slate-750 hover:bg-white/70'
           }`}
         >
           {sirenPlaying ? (
@@ -356,15 +374,15 @@ export const SOSCenterPage: React.FC = () => {
       </div>
 
       {/* Coordinates stream */}
-      <div className="p-4 bg-slate-50 border border-slate-100 rounded-2xl max-w-md w-full text-xs text-slate-600 leading-normal shadow-sm">
+      <div className="p-4 bg-white/30 border border-white/45 backdrop-blur-md rounded-2xl max-w-md w-full text-xs text-slate-650 leading-normal shadow-sm">
         <div className="flex items-center justify-between font-bold text-slate-800 mb-2">
           <span>Active Coordinate Stream:</span>
           <span className="w-2 h-2 rounded-full bg-red-500 animate-ping"></span>
         </div>
         <div className="space-y-1 text-left font-mono text-[10px]">
-          <p><span className="text-slate-400">Latitude:</span> {activeJourney?.current_lat?.toFixed(5) || "12.9716"}</p>
-          <p><span className="text-slate-400">Longitude:</span> {activeJourney?.current_lng?.toFixed(5) || "77.5946"}</p>
-          <p><span className="text-slate-400">Cab Number:</span> {activeJourney?.cab_number || "EMERGENCY_SOS"}</p>
+          <p><span className="text-slate-500">Latitude:</span> {activeJourney?.current_lat?.toFixed(5) || "12.9716"}</p>
+          <p><span className="text-slate-500">Longitude:</span> {activeJourney?.current_lng?.toFixed(5) || "77.5946"}</p>
+          <p><span className="text-slate-500">Cab Number:</span> {activeJourney?.cab_number || "EMERGENCY_SOS"}</p>
         </div>
       </div>
 
@@ -451,7 +469,7 @@ export const SOSCenterPage: React.FC = () => {
 
       {/* Notified Guardians with production delivery statuses */}
       <div className="max-w-md w-full text-left space-y-3">
-        <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest text-center">Notified Guardians</h4>
+        <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest text-center">Notified Guardians</h4>
         
         {contacts.map((c, i) => {
           const alert = alertStatuses.find((a: any) => a.contact_phone === c.phone || a.contact_phone.includes(c.phone));
@@ -460,34 +478,34 @@ export const SOSCenterPage: React.FC = () => {
           const ack = alert?.acknowledged === 1;
 
           return (
-            <div key={i} className="p-4 bg-white/80 border border-slate-100 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-sm">
+            <div key={i} className="p-4 bg-white/40 border border-white/50 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-sm">
               <div>
                 <p className="font-bold text-slate-800 flex items-center gap-1.5">
                   {c.name}
                 </p>
-                <p className="text-[10px] text-slate-400 font-mono mt-0.5">{c.phone}</p>
+                <p className="text-[10px] text-slate-500 font-mono mt-0.5">{c.phone}</p>
               </div>
               
-              <div className="flex flex-wrap gap-1.5">
+              <div className="flex flex-wrap gap-1.5 font-semibold">
                 {/* SMS Status Badge */}
                 <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${
-                  smsStatus === 'delivered' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' :
-                  smsStatus === 'failed' ? 'bg-red-50 text-red-600 border border-red-100' : 'bg-amber-50 text-amber-600 border border-amber-100'
+                  smsStatus === 'delivered' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
+                  smsStatus === 'failed' ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-amber-50 text-amber-700 border border-amber-200'
                 }`}>
                   {smsStatus === 'delivered' ? 'SMS Delivered' : smsStatus === 'failed' ? 'SMS Failed' : 'SMS Pending'}
                 </span>
 
                 {/* Call Status Badge */}
                 <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${
-                  callStatus === 'connected' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' :
-                  callStatus === 'failed' ? 'bg-red-50 text-red-600 border border-red-100' : 'bg-amber-50 text-amber-600 border border-amber-100'
+                  callStatus === 'connected' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
+                  callStatus === 'failed' ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-amber-50 text-amber-700 border border-amber-200'
                 }`}>
                   {callStatus === 'connected' ? 'Call Connected' : callStatus === 'failed' ? 'Call Failed' : 'Call Pending'}
                 </span>
 
                 {/* Acknowledgment Badge */}
                 <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${
-                  ack ? 'bg-emerald-50 text-emerald-600 border border-emerald-100 animate-pulse' : 'bg-slate-50 text-slate-400 border border-slate-100'
+                  ack ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 animate-pulse' : 'bg-slate-50 text-slate-500 border border-slate-100'
                 }`}>
                   {ack ? 'Guardian Acknowledged' : 'Awaiting Acknowledgment'}
                 </span>
@@ -497,7 +515,7 @@ export const SOSCenterPage: React.FC = () => {
         })}
 
         {contacts.length === 0 && (
-          <p className="text-xs text-slate-400 text-center font-light">
+          <p className="text-xs text-slate-500 text-center font-light">
             No contacts configured. Emergency dispatcher triggers fallback webhooks.
           </p>
         )}
@@ -506,7 +524,7 @@ export const SOSCenterPage: React.FC = () => {
       {/* Resolution button */}
       <button
         onClick={handleDeescalate}
-        className="px-8 py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-2xl transition duration-150 shadow-md text-xs tracking-wider uppercase"
+        className="px-8 py-3.5 bg-emerald-650 hover:bg-emerald-755 text-white font-bold rounded-2xl transition duration-150 shadow-md text-xs tracking-wider uppercase"
       >
         De-escalate & Set Safe Status
       </button>

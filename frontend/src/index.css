@@ -136,3 +136,36 @@ a .text-white,
 .bg-emerald-500 .text-white {
   color: #FFFFFF !important;
 }
+
+/* Glassmorphism elements styling */
+.glass-input {
+  background: rgba(255, 255, 255, 0.5) !important;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(15, 23, 42, 0.08) !important;
+  color: #0F172A !important;
+  outline: none;
+  transition: all 0.20s ease-in-out;
+}
+
+.glass-input:focus {
+  background: rgba(255, 255, 255, 0.9) !important;
+  border-color: rgba(124, 58, 237, 0.3) !important;
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.06);
+}
+
+.glass-item {
+  background: rgba(255, 255, 255, 0.45) !important;
+  border: 1px solid rgba(255, 255, 255, 0.4) !important;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  box-shadow: 0 2px 8px 0 rgba(15, 23, 42, 0.01),
+              inset 0 1px 0px 0 rgba(255, 255, 255, 0.5);
+  transition: all 0.20s ease;
+}
+
+.glass-item:hover {
+  background: rgba(255, 255, 255, 0.70) !important;
+  border-color: rgba(124, 58, 237, 0.15) !important;
+  box-shadow: 0 4px 12px 0 rgba(15, 23, 42, 0.02);
+}
