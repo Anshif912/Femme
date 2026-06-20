@@ -113,9 +113,10 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         Frontend Status: Dashboard Mounted: YES • Sidebar Mounted: YES • API Connected: YES • Auth Loaded: YES
       </div>
       <div className="relative min-h-screen bg-[#F6F3ED] flex flex-col md:flex-row text-[#0F172A] overflow-hidden">
-        {/* ambient luxury background glows */}
-        <div className="absolute top-[-10%] right-[-10%] w-[500px] h-[500px] bg-gradient-to-br from-brand-500/10 to-accent/5 rounded-full blur-[100px] pointer-events-none z-0"></div>
-        <div className="absolute bottom-[-10%] left-[20%] w-[600px] h-[600px] bg-gradient-to-tr from-brand-500/5 to-transparent rounded-full blur-[130px] pointer-events-none z-0"></div>
+        {/* ambient luxury background glows (True Glassmorphism refractions) */}
+        <div className="absolute top-[-10%] left-[10%] w-[550px] h-[550px] bg-gradient-to-tr from-violet-500/25 via-pink-500/20 to-brand-500/20 rounded-full blur-[110px] pointer-events-none z-0 animate-pulse-slow"></div>
+        <div className="absolute bottom-[-15%] right-[10%] w-[650px] h-[650px] bg-gradient-to-br from-emerald-500/20 via-teal-500/15 to-indigo-500/20 rounded-full blur-[130px] pointer-events-none z-0 animate-pulse-slow-reverse"></div>
+        <div className="absolute top-[30%] right-[20%] w-[400px] h-[400px] bg-gradient-to-r from-amber-400/15 to-rose-500/15 rounded-full blur-[95px] pointer-events-none z-0"></div>
       
       {/* Sidebar Navigation - Desktop */}
       <aside className="hidden md:flex flex-col w-64 bg-white/70 backdrop-blur-xl border-r border-slate-200/40 p-5 shrink-0 shadow-lg z-10">
