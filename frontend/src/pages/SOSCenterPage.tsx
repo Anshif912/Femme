@@ -510,8 +510,6 @@ export const SOSCenterPage: React.FC = () => {
       >
         De-escalate & Set Safe Status
       </button>
-    </div>>
-
     </div>
   );
 };
