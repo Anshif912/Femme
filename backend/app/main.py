@@ -10,7 +10,7 @@ from app.config import settings
 from app.database import init_sqlite_db, DBService
 from app.auth import get_current_user, create_access_token, generate_otp, send_sms_otp, send_twilio_verify_otp, check_twilio_verify_otp
 from app.utils.phone_validation import format_to_e164
-from app.routes import journeys, contacts, evidence, reports, simulation
+from app.routes import journeys, contacts, evidence, reports, simulation, geocode, safety_route
 
 # Initialize local SQLite DB tables
 init_sqlite_db()
@@ -219,7 +219,7 @@ async def sos_trigger(current_user: Dict = Depends(get_current_user)):
     call_initiated = False
     sms_status = "Bypassed"
 
-    # Send multi-channel alerts to emergency contacts using NotificationProvider abstraction
+    # Send multi-channelfrom app.routes import journeys, contacts, evidence, reports, simulation, geocode, safety_routeion
     for c in contacts:
         raw_phone = c.get("phone", "")
         formatted_phone = format_to_e164(raw_phone) or raw_phone
@@ -371,11 +371,12 @@ async def sos_acknowledge(journey_id: str, phone: Optional[str] = None):
     return {"status": "success", "acknowledged_ids": updated}
 
 # Include Feature Routers
-app.include_router(journeys.router, prefix=settings.API_V1_STR)
+
 app.include_router(contacts.router, prefix=settings.API_V1_STR)
 app.include_router(evidence.router, prefix=settings.API_V1_STR)
 app.include_router(reports.router, prefix=settings.API_V1_STR)
-app.include_router(simulation.router, prefix=settings.API_V1_STR)
+app.include_router(geocode.router, prefix=settings.API_V1_STR)
+app.include_router(safety_route.router, prefix=settings.API_V1_STR)
 
 
 # Real-time WebSocket Location Sharing Server

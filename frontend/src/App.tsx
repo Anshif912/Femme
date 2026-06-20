@@ -3,6 +3,7 @@ import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { useStore } from './store/useStore';
 import { Layout } from './components/Layout';
 import { api } from './utils/api';
+import { LocationProvider } from './context/LocationContext';
 import { AlertTriangle } from 'lucide-react';
 
 // Import Pages
@@ -65,13 +66,14 @@ export const App: React.FC = () => {
   }, []);
 
   return (
-    <Router>
-      {isBackendReachable === false && (
-        <div className="bg-red-600 text-white text-center py-2 px-4 flex items-center justify-center gap-2 font-bold text-sm z-50 relative">
-          <AlertTriangle className="w-4 h-4" />
-          <span>Backend unreachable</span>
-        </div>
-      )}
+    <LocationProvider>
+      <Router>
+        {isBackendReachable === false && (
+          <div className="bg-red-600 text-white text-center py-2 px-4 flex items-center justify-center gap-2 font-bold text-sm z-50 relative">
+            <AlertTriangle className="w-4 h-4" />
+            <span>Backend unreachable</span>
+          </div>
+        )}
       <Routes>
         {/* Public Landing */}
         <Route path="/" element={<LandingPage />} />
@@ -239,7 +241,8 @@ export const App: React.FC = () => {
         {/* Catch-all fallback redirect */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
-    </Router>
+        </Router>
+    </LocationProvider>
   );
 };
 export default App;

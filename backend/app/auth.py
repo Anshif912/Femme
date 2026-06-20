@@ -1,4 +1,6 @@
 import random
+import logging
+logging.basicConfig(level=logging.INFO)
 from datetime import datetime, timedelta
 from typing import Optional
 from fastapi import Depends, HTTPException, status
@@ -25,6 +27,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
         "phone": phone,
         "user_id": user_id
     })
+    logging.info(f"[JWT_CREATED] user={phone} exp={expire}")
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
     return encoded_jwt
 
@@ -64,20 +67,21 @@ def send_sms(phone: str, message_text: str) -> bool:
                 from_=settings.TWILIO_FROM_NUMBER or settings.TWILIO_PHONE_NUMBER,
                 to=phone
             )
-            print(f"Sent Twilio SMS to {phone}")
+            logging.info(f"Sent Twilio SMS to {phone}")
             return True
         except Exception as e:
-            print(f"Twilio SMS sending failed: {e}")
+            logging.error(f"Twilio SMS sending failed: {e}")
+            return False
             
-    print(f"[SMS Bypass] Bypassed backend Twilio dispatch for {phone} (native device handles composition)")
+    logging.info(f"[SMS Bypass] Bypassed backend Twilio dispatch for {phone} (native device handles composition)")
     return True
 
 def send_sms_otp(phone: str, otp: str) -> bool:
     message_text = f"[FEMME] Your verification OTP is: {otp}. Valid for 10 minutes."
     if settings.SMS_PROVIDER != "twilio":
-        print("==================================================")
-        print(f"🔑 [SIMULATED OTP SMS] TO {phone}: {message_text}")
-        print("==================================================")
+        logging.info("==================================================")
+        logging.info(f"🔑 [SIMULATED OTP SMS] TO {phone}: {message_text}")
+        logging.info("==================================================")
         return True
     return send_sms(phone, message_text)
 
@@ -89,10 +93,10 @@ def send_twilio_verify_otp(phone: str) -> bool:
             client.verify.v2.services(settings.TWILIO_VERIFY_SERVICE_SID) \
                 .verifications \
                 .create(to=phone, channel='sms')
-            print(f"[TWILIO VERIFY] Dispatched SMS verification to {phone}")
+            logging.info(f"[TWILIO VERIFY] Dispatched SMS verification to {phone}")
             return True
         except Exception as e:
-            print(f"[TWILIO VERIFY] Failed to send via Twilio API: {e}. Falling back to simulation.")
+            logging.error(f"[TWILIO VERIFY] Failed to send via Twilio API: {e}. Falling back to simulation.")
     return False
 
 def check_twilio_verify_otp(phone: str, code: str) -> bool:
@@ -105,5 +109,5 @@ def check_twilio_verify_otp(phone: str, code: str) -> bool:
                 .create(to=phone, code=code)
             return check.status == "approved"
         except Exception as e:
-            print(f"[TWILIO VERIFY] Verification failed: {e}. Checking local database.")
+            logging.error(f"[TWILIO VERIFY] Verification failed: {e}. Checking local database.")
     return False

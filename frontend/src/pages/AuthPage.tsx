@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
 import api from '../utils/api';
 import { Shield, Smartphone, KeyRound, ArrowRight, Info, CheckCircle2, RefreshCw } from 'lucide-react';
+import AIHero from '../components/AIHero';
 import { Logger } from '../utils/Logger';
 
 export const AuthPage: React.FC = () => {
@@ -83,6 +84,7 @@ export const AuthPage: React.FC = () => {
           </div>
           <h2 className="text-2xl font-black text-white tracking-wide">Secure Sign In</h2>
           <p className="text-xs text-gray-400 mt-1">FEMME AI Passive Travel Shield</p>
+          <AIHero />
         </div>
 
         {error && (

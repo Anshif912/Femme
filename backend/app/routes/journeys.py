@@ -3,6 +3,8 @@ from pydantic import BaseModel
 from typing import List, Dict, Optional, Any
 from datetime import datetime
 from app.auth import get_current_user, send_sms
+from app.config import settings
+from app.utils.notification_providers import TwilioProvider
 from app.database import DBService
 from app.utils.routing import fetch_route, check_route_deviation, score_safety, geocode_address
 from app.utils.phone_validation import format_to_e164
@@ -242,6 +244,8 @@ async def trigger_sos(current_user: Dict = Depends(get_current_user)):
     print("Initializing Notification Provider")
     from app.utils.notification_providers import get_configured_provider
     provider = get_configured_provider()
+    if not provider and settings.TWILIO_ACCOUNT_SID and settings.TWILIO_AUTH_TOKEN and settings.TWILIO_PHONE_NUMBER:
+        provider = TwilioProvider(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN, settings.TWILIO_PHONE_NUMBER)
     
     sms_sent = False
     sms_status = "Bypassed"

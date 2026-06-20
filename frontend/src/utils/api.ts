@@ -122,6 +122,9 @@ export const api = {
     
   evaluateRouteSafety: (coords: [number, number][]) => 
     request('/journeys/score', { method: 'POST', body: JSON.stringify(coords) }),
+    // AI Safety Route Intelligence – fetch three route options
+    fetchSafetyRoutes: (origin: { lat: number; lng: number }, destination: { lat: number; lng: number }) =>
+      request('/route/safety', { method: 'POST', body: JSON.stringify({ origin, destination }) }),
 
   // Contacts
   getContacts: () => 

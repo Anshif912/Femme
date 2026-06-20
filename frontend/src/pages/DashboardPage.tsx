@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
-import api from '../utils/api';
+import AIHero from '../components/AIHero';
+import AnimatedCounter from '../components/AnimatedCounter';
 import { 
   Shield, 
   Play, 
@@ -142,24 +143,18 @@ export const DashboardPage: React.FC = () => {
       
       {/* Top Welcome / Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
+        <div className="flex flex-col">
           <h2 className="text-2xl font-black text-white">Welcome, {user?.name || 'Traveler'}</h2>
           <p className="text-sm text-gray-400">Your passive safety companion is active and standing by.</p>
         </div>
-        
-        <div className="flex items-center gap-2">
-          {activeJourney ? (
-            <div className="px-3.5 py-1.5 bg-brand-500/10 border border-brand-500/20 text-brand-400 text-xs font-bold rounded-lg flex items-center gap-2 animate-pulse-slow">
-              <span className="w-2 h-2 rounded-full bg-brand-500 animate-ping"></span>
-              ACTIVE MONITORING
-            </div>
-          ) : (
-            <div className="px-3.5 py-1.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold rounded-lg flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-              SHIELD SECURED
-            </div>
-          )}
-        </div>
+        <AIHero />
+      {/* Quick Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
+        <AnimatedCounter end={historyCount} label="Commutes" />
+        <AnimatedCounter end={contactsCount} label="Guardians" />
+        <AnimatedCounter end={activeJourney ? 1 : 0} label="Active Journey" />
+        <AnimatedCounter end={isEmergency ? 1 : 0} label="Emergency" />
+      </div>
       </div>
 
       {/* Main Alert Banner */}

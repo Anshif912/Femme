@@ -2,16 +2,18 @@ import React, { useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
 import api from '../utils/api';
-import { 
-  Shield, 
-  MapPin, 
-  Users, 
-  Lock, 
-  FileText, 
-  Map, 
-  BarChart2, 
-  User, 
-  Settings, 
+import VideoBackground from './VideoBackground';
+import { AnimatePresence, motion } from 'framer-motion';
+import {
+  Shield,
+  MapPin,
+  Users,
+  Lock,
+  FileText,
+  Map,
+  BarChart2,
+  User,
+  Settings,
   LogOut,
   AlertTriangle,
   Radio,
@@ -99,7 +101,9 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   ];
 
   return (
-    <div className="min-h-screen bg-dark-950 flex flex-col md:flex-row text-gray-200">
+    <>
+      <VideoBackground />
+      <div className="relative min-h-screen bg-dark-950 flex flex-col md:flex-row text-gray-200">
       
       {/* Sidebar Navigation - Desktop */}
       <aside className="hidden md:flex flex-col w-64 bg-dark-900 border-r border-gray-800 p-4 shrink-0">
@@ -181,9 +185,11 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         </header>
 
         {/* Page Content area */}
-        <main className="flex-1 overflow-y-auto p-4 md:p-6 pb-24 md:pb-6 relative">
-          {children}
-        </main>
+          <AnimatePresence mode="wait">
+            <motion.main key={location.pathname} className="flex-1 overflow-y-auto p-4 md:p-6 pb-24 md:pb-6 relative" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.3 }}>
+              {children}
+            </motion.main>
+          </AnimatePresence>
 
         {/* Bottom Nav Bar - Mobile Only */}
         <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-dark-900/90 backdrop-blur-md border-t border-gray-800 flex justify-around py-2 px-1 z-40">
@@ -267,7 +273,8 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           </div>
         </div>
       )}
-    </div>
-  );
+      </div>
+    </>
+    );
 };
 export default Layout;

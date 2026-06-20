@@ -6,6 +6,8 @@ import { MapContainer, TileLayer, Marker, Popup, Polyline, Circle, useMap } from
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Navigation, ShieldAlert, Heart, Compass, ShieldCheck } from 'lucide-react';
+import { useLocation } from '../context/LocationContext';
+import LocationPermissionModal from '../components/LocationPermissionModal';
 
 // Setup custom SVG icons to avoid Leaflet bundler image loading errors
 const createCustomIcon = (color: string, iconHtml: string) => {
@@ -69,6 +71,7 @@ export const RouteViewPage: React.FC = () => {
 
   const { activeJourney, currentLat, currentLng, currentSpeed } = useStore();
 
+  const { location, permissionDenied } = useLocation();
   const [localJourney, setLocalJourney] = useState<any | null>(null);
   const [localCoords, setLocalCoords] = useState<{ lat: number; lng: number; speed: number } | null>(null);
 
@@ -79,17 +82,22 @@ export const RouteViewPage: React.FC = () => {
     status: 'green',
     reason: 'Evaluating route conditions...'
   });
-
+  const [safetyRoutes, setSafetyRoutes] = useState<any[]>([]);
+  const [selectedRoute, setSelectedRoute] = useState<string>('safest');
   const journeyToUse = isPublicTrack ? localJourney : activeJourney;
   const latToUse = isPublicTrack ? localCoords?.lat : currentLat;
   const lngToUse = isPublicTrack ? localCoords?.lng : currentLng;
   const speedToUse = isPublicTrack ? (localCoords?.speed ?? 0) : currentSpeed;
 
-  // Default coordinate if no journey active (Bengaluru central)
-  const defaultCenter: [number, number] = [12.9716, 77.5946];
-  const mapCenter: [number, number] = journeyToUse && latToUse && lngToUse 
-    ? [latToUse, lngToUse] 
-    : (journeyToUse ? [journeyToUse.pickup_lat, journeyToUse.pickup_lng] : defaultCenter);
+  // Determine map center: prefer user location, then journey coords, then fallback.
+  const fallbackCenter: [number, number] = [12.9716, 77.5946];
+  const mapCenter: [number, number] = location
+    ? [location.latitude, location.longitude]
+    : journeyToUse && latToUse && lngToUse
+    ? [latToUse, lngToUse]
+    : journeyToUse
+    ? [journeyToUse.pickup_lat, journeyToUse.pickup_lng]
+    : fallbackCenter;
 
   // Public Journey Tracking details (polling & WebSockets) + Auto-acknowledge SOS
   useEffect(() => {
@@ -175,7 +183,18 @@ export const RouteViewPage: React.FC = () => {
       }
     };
     fetchZones();
-  }, [isAuthenticated, isPublicTrack]);
+    }, [isAuthenticated, isPublicTrack]);
+
+    // Fetch AI Safety Routes
+    useEffect(() => {
+      if (journeyToUse && journeyToUse.pickup_lat && journeyToUse.dest_lat) {
+        const origin = { lat: journeyToUse.pickup_lat, lng: journeyToUse.pickup_lng };
+        const destination = { lat: journeyToUse.dest_lat, lng: journeyToUse.dest_lng };
+        api.fetchSafetyRoutes(origin, destination)
+          .then(setSafetyRoutes)
+          .catch(err => console.error('Failed to fetch safety routes:', err));
+      }
+    }, [journeyToUse]);
 
   // Compute safety scorer score based on path coordinates
   useEffect(() => {
@@ -231,7 +250,31 @@ export const RouteViewPage: React.FC = () => {
         </div>
       )}
 
-      {/* Map Content Box */}
+      {/* AI Safety Route Intelligence Panel */}
+<div className="absolute top-4 left-4 right-4 bg-dark-900/90 backdrop-blur-md border border-gray-800 rounded-xl p-4 flex flex-col md:flex-row gap-4 z-[1000]">
+  {safetyRoutes.map((route) => {
+    const riskLevel = route.score >= 71 ? 'Low' : route.score >= 41 ? 'Medium' : 'High';
+    const bgColor = riskLevel === 'Low' ? 'bg-emerald-900/30 border-emerald-500' :
+                   riskLevel === 'Medium' ? 'bg-amber-900/30 border-amber-500' :
+                   'bg-rose-900/30 border-rose-500';
+    return (
+      <div key={route.type} className={`flex-1 p-3 rounded-lg border ${bgColor} cursor-pointer`} onClick={() => setSelectedRoute(route.type)}>
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-sm font-semibold uppercase">{route.type.charAt(0).toUpperCase() + route.type.slice(1)} Route</h3>
+          <span className="text-xs font-bold">{route.score}/100</span>
+        </div>
+        <p className="text-xs text-gray-300">Distance: {(route.distance/1000).toFixed(1)} km</p>
+        <p className="text-xs text-gray-300">Duration: {(route.duration/60).toFixed(0)} min</p>
+        <p className="text-xs text-gray-300">Risk: {riskLevel}</p>
+        <ul className="mt-2 list-disc list-inside text-xs text-gray-400">
+          {route.reasons?.map((r:string,i:number)=> <li key={i}>{r}</li>)}
+        </ul>
+      </div>
+    );
+  })}
+</div>
+
+{/* Map Content Box */}
       <div className="flex-1 min-h-[450px] relative rounded-2xl overflow-hidden border border-gray-800 shadow-xl bg-dark-900">
         
         <MapContainer 
@@ -333,6 +376,16 @@ export const RouteViewPage: React.FC = () => {
           <MapController center={mapCenter} />
         </MapContainer>
 
+        {/* Permission Modal */}
+        {permissionDenied && (
+          <LocationPermissionModal
+            onRetry={() => {
+              // Force reload to re-request permission
+              window.location.reload();
+            }}
+          />
+        )}
+
         {/* Floating Controls Overlay */}
         {!journeyToUse && (
           <div className="absolute bottom-4 left-4 right-4 bg-dark-900/90 backdrop-blur-md border border-gray-800 p-4 rounded-xl z-[1000] flex flex-col sm:flex-row justify-between items-center gap-3">
@@ -340,7 +393,7 @@ export const RouteViewPage: React.FC = () => {
               <Compass className="w-5 h-5 text-brand-500 animate-spin-slow" />
               <div>
                 <p className="text-xs font-bold text-white">Safety Corridor Explorer</p>
-                <p className="text-[10px] text-gray-400">Centred on Bengaluru. Reviewing community safe/danger vectors.</p>
+                <p className="text-[10px] text-gray-400">Centred on your current location.</p>
               </div>
             </div>
             <button
