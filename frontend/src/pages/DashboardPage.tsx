@@ -11,7 +11,7 @@ interface JourneyCardProps {
 }
 
 const JourneyCard: React.FC<JourneyCardProps> = ({ journey, onComplete }) => (
-  <div className="p-6 bg-white rounded-2xl border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.015)] transition-all hover:-translate-y-1 hover:shadow-[0_12px_40px_rgb(124,58,237,0.04)] duration-300 space-y-4 text-[#0F172A] flex flex-col justify-between min-h-[240px]">
+  <div className="p-6 glass-card transition-all hover:-translate-y-1 hover:shadow-[0_12px_40px_rgb(124,58,237,0.04)] duration-300 space-y-4 text-[#0F172A] flex flex-col justify-between min-h-[240px]">
     <div>
       <div className="flex items-center justify-between mb-3">
         <span className="text-[10px] font-bold uppercase tracking-widest text-[#6B7280]">Active Journey</span>
@@ -126,7 +126,7 @@ const DashboardPage: React.FC = () => {
         {activeJourney ? (
           <JourneyCard journey={activeJourney} onComplete={handleCompleteJourney} />
         ) : (
-          <div className="p-6 bg-white rounded-2xl border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.015)] transition-all hover:-translate-y-1 hover:shadow-[0_12px_40px_rgb(124,58,237,0.04)] duration-300 flex flex-col justify-between min-h-[190px]">
+          <div className="p-6 glass-card transition-all hover:-translate-y-1 hover:shadow-[0_12px_40px_rgb(124,58,237,0.04)] duration-300 flex flex-col justify-between min-h-[190px]">
             <div>
               <div className="flex items-center justify-between mb-3">
                 <span className="text-[10px] font-bold uppercase tracking-widest text-[#6B7280]">Active Journey</span>
@@ -145,7 +145,7 @@ const DashboardPage: React.FC = () => {
           </div>
         )}
 
-        <div className="p-6 bg-white rounded-2xl border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.015)] transition-all hover:-translate-y-1 hover:shadow-[0_12px_40px_rgb(124,58,237,0.04)] duration-300 flex flex-col justify-between min-h-[190px]">
+        <div className="p-6 glass-card transition-all hover:-translate-y-1 hover:shadow-[0_12px_40px_rgb(124,58,237,0.04)] duration-300 flex flex-col justify-between min-h-[190px]">
           <div>
             <div className="flex items-center justify-between mb-2">
               <span className="text-[10px] font-bold uppercase tracking-widest text-[#6B7280]">Trusted Contacts</span>
@@ -165,7 +165,7 @@ const DashboardPage: React.FC = () => {
           </button>
         </div>
 
-        <div className="p-6 bg-white rounded-2xl border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.015)] transition-all hover:-translate-y-1 hover:shadow-[0_12px_40px_rgb(124,58,237,0.04)] duration-300 flex flex-col justify-between min-h-[190px]">
+        <div className="p-6 glass-card transition-all hover:-translate-y-1 hover:shadow-[0_12px_40px_rgb(124,58,237,0.04)] duration-300 flex flex-col justify-between min-h-[190px]">
           <div>
             <div className="flex items-center justify-between mb-2">
               <span className="text-[10px] font-bold uppercase tracking-widest text-[#6B7280]">Evidence Capsules</span>
@@ -191,7 +191,7 @@ const DashboardPage: React.FC = () => {
           )}
         </div>
 
-        <div className="p-6 bg-white rounded-2xl border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.015)] transition-all hover:-translate-y-1 hover:shadow-[0_12px_40px_rgb(124,58,237,0.04)] duration-300 flex flex-col justify-between min-h-[190px]">
+        <div className="p-6 glass-card transition-all hover:-translate-y-1 hover:shadow-[0_12px_40px_rgb(124,58,237,0.04)] duration-300 flex flex-col justify-between min-h-[190px]">
           <div>
             <div className="flex items-center justify-between mb-2">
               <span className="text-[10px] font-bold uppercase tracking-widest text-[#6B7280]">Location Status</span>
@@ -221,7 +221,7 @@ const DashboardPage: React.FC = () => {
           </div>
         </div>
 
-        <div className="p-6 bg-red-50 rounded-2xl border border-red-100 shadow-[0_8px_30px_rgba(220,38,38,0.01)] transition-all hover:-translate-y-1 hover:shadow-[0_12px_40px_rgba(220,38,38,0.04)] duration-300 flex flex-col justify-between min-h-[190px]">
+        <div className="p-6 bg-red-50/75 backdrop-blur-md rounded-2xl border border-red-100/60 shadow-[0_8px_30px_rgba(220,38,38,0.015)] transition-all hover:-translate-y-1 hover:shadow-[0_12px_40px_rgba(220,38,38,0.04)] duration-300 flex flex-col justify-between min-h-[190px]">
           <div>
             <div className="flex items-center justify-between mb-2">
               <span className="text-[10px] font-bold uppercase tracking-widest text-red-600">SOS Emergency</span>

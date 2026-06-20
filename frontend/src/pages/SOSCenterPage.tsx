@@ -107,7 +107,7 @@ export const SOSCenterPage: React.FC = () => {
     return () => clearInterval(interval);
   }, [activeJourney]);
 
-  // 3. Web Audio Programmatic Siren Synthesizer (No static file dependencies!)
+  // 3. Web Audio Programmatic Siren Synthesizer (LFO Frequency Modulation wail)
   useEffect(() => {
     if (sirenPlaying) {
       try {
@@ -115,34 +115,60 @@ export const SOSCenterPage: React.FC = () => {
         const ctx = new AudioContextClass();
         audioCtxRef.current = ctx;
 
+        // Carrier Oscillator (primary tone)
         const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(600, ctx.currentTime);
 
-        osc.type = 'sawtooth';
-        
-        osc.frequency.setValueAtTime(440, ctx.currentTime);
-        osc.frequency.linearRampToValueAtTime(880, ctx.currentTime + 0.5);
-        osc.frequency.linearRampToValueAtTime(440, ctx.currentTime + 1.0);
-        
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        
-        let sweepInterval = setInterval(() => {
-          if (ctx.state === 'suspended') return;
-          osc.frequency.setValueAtTime(440, ctx.currentTime);
-          osc.frequency.linearRampToValueAtTime(880, ctx.currentTime + 0.5);
-          osc.frequency.linearRampToValueAtTime(440, ctx.currentTime + 1.0);
-        }, 1000);
+        // Modulator Oscillator (LFO wailing speed)
+        const lfo = ctx.createOscillator();
+        lfo.type = 'sine';
+        lfo.frequency.setValueAtTime(1.5, ctx.currentTime); 
 
-        gain.gain.setValueAtTime(0.15, ctx.currentTime);
+        // Modulator Gain (depth of the pitch swing: +/- 250Hz)
+        const modGain = ctx.createGain();
+        modGain.gain.setValueAtTime(250, ctx.currentTime); 
 
-        osc.start();
+        // Connect modulator to carrier frequency
+        lfo.connect(modGain);
+        modGain.connect(osc.frequency);
+
+        // Volume Gain Node
+        const gainNode = ctx.createGain();
+        gainNode.gain.setValueAtTime(0.2, ctx.currentTime);
+        gainNode.connect(ctx.destination);
+        
+        // Connect carrier to volume control
+        osc.connect(gainNode);
+
+        // Start oscillators
+        osc.start(0);
+        lfo.start(0);
+
         oscillatorRef.current = osc;
-        gainRef.current = gain;
+        gainRef.current = gainNode;
+
+        // Auto-resume if suspended
+        if (ctx.state === 'suspended') {
+          ctx.resume();
+        }
+
+        // Active listener to trigger wail as soon as user clicks anywhere
+        const forceResume = () => {
+          if (ctx.state === 'suspended') {
+            ctx.resume().then(() => console.log('AudioContext auto-resumed via user gesture'));
+          }
+        };
+        window.addEventListener('click', forceResume);
+        window.addEventListener('touchstart', forceResume);
 
         return () => {
-          clearInterval(sweepInterval);
-          osc.stop();
+          window.removeEventListener('click', forceResume);
+          window.removeEventListener('touchstart', forceResume);
+          try {
+            osc.stop();
+            lfo.stop();
+          } catch (_) {}
           ctx.close();
         };
       } catch (e) {
@@ -193,96 +219,114 @@ export const SOSCenterPage: React.FC = () => {
   const emergencyMessage = `🚨 FEMME EMERGENCY ALERT\n\nUser: ${userName}\n\nLocation:\n${mapsLink}\n\nCab:\n${cabNumber}\n\nTimestamp:\n${timestamp}\n\nPossible emergency detected.`;
 
   return (
-    <div className={`min-h-[80vh] rounded-3xl p-6 transition-all duration-300 ${
-      blinkingState ? 'bg-red-950/40 border-2 border-red-500/80 glow-rose' : 'bg-dark-900 border-2 border-gray-800'
-    } flex flex-col items-center justify-center text-center space-y-6`}>
+    <div className={`min-h-[80vh] rounded-3xl p-8 transition-all duration-300 bg-white/70 backdrop-blur-xl border ${
+      blinkingState ? 'border-red-500/80 shadow-[0_0_40px_rgba(239,68,68,0.12)]' : 'border-slate-100/85 shadow-[0_12px_40px_rgba(15,23,42,0.03)]'
+    } flex flex-col items-center justify-center text-center space-y-6 max-w-2xl mx-auto`}>
       
       {/* Blinking SOS Alert Icon */}
-      <div className="w-20 h-20 bg-red-600 rounded-full flex items-center justify-center animate-bounce shadow-lg shadow-red-500/30">
+      <div className={`w-20 h-20 rounded-full flex items-center justify-center transition-all duration-300 ${
+        blinkingState ? 'bg-red-600 shadow-[0_0_24px_rgba(220,38,38,0.35)] scale-105' : 'bg-red-500 shadow-sm'
+      }`}>
         <ShieldAlert className="w-10 h-10 text-white" />
       </div>
 
-      <div>
-        <h2 className="text-3xl font-black text-white tracking-wide uppercase">EMERGENCY SOS ACTIVE</h2>
-        <p className="text-xs text-red-400 mt-2 font-semibold tracking-widest uppercase">
+      <div className="space-y-1">
+        <h2 className="text-2xl font-black text-red-600 tracking-tight uppercase">Emergency SOS Active</h2>
+        <p className="text-xs text-slate-500 font-semibold tracking-widest uppercase">
           Live GPS stream dispatched to priority guardians
         </p>
       </div>
 
       {/* Emergency Progress Checklist */}
-      <div className="glass-card p-5 max-w-sm w-full rounded-2xl border border-red-500/20 text-left space-y-3">
-        <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest border-b border-gray-800 pb-2 mb-2">
+      <div className="bg-white/80 border border-slate-100 rounded-2xl p-6 w-full max-w-md text-left space-y-4 shadow-sm">
+        <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest border-b border-slate-50 pb-2 mb-1">
           Emergency Checklist Actions
         </h4>
         
-        <div className="space-y-2.5 text-xs font-semibold">
+        <div className="space-y-3 text-xs font-semibold">
           {/* Emergency state lock on server */}
-          <div className="flex items-center gap-2.5">
-            {steps.emergencyActivated ? (
-              <span className="text-emerald-400 font-bold">✓</span>
-            ) : (
-              <Loader2 className="w-3.5 h-3.5 text-red-500 animate-spin" />
-            )}
-            <span className={steps.emergencyActivated ? 'text-gray-300' : 'text-gray-500'}>Emergency Activated</span>
+          <div className="flex items-center justify-between text-slate-700">
+            <div className="flex items-center gap-2.5">
+              {steps.emergencyActivated ? (
+                <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span>
+              ) : (
+                <Loader2 className="w-3.5 h-3.5 text-red-500 animate-spin" />
+              )}
+              <span className={steps.emergencyActivated ? 'text-slate-900 font-bold' : 'text-slate-400'}>Emergency Activation</span>
+            </div>
+            {steps.emergencyActivated && <span className="text-emerald-600 text-[10px] font-bold tracking-wide bg-emerald-50 px-2 py-0.5 rounded-full">ACTIVE</span>}
           </div>
 
           {/* SMS dispatch status from provider logs */}
-          <div className="flex items-center gap-2.5">
-            {steps.smsSent ? (
-              <span className="text-emerald-400 font-bold">✓</span>
-            ) : (
-              <Loader2 className="w-3.5 h-3.5 text-red-500 animate-spin" />
-            )}
-            <span className={steps.smsSent ? 'text-gray-300' : 'text-gray-500'}>
-              {steps.smsStatus || 'SMS Dispatching'}
-            </span>
+          <div className="flex items-center justify-between text-slate-700">
+            <div className="flex items-center gap-2.5">
+              {steps.smsSent ? (
+                <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span>
+              ) : (
+                <Loader2 className="w-3.5 h-3.5 text-red-500 animate-spin" />
+              )}
+              <span className={steps.smsSent ? 'text-slate-900 font-bold' : 'text-slate-400'}>Guardian SMS Broadcast</span>
+            </div>
+            {steps.smsSent && <span className="text-emerald-600 text-[10px] font-bold tracking-wide bg-emerald-50 px-2 py-0.5 rounded-full">DISPATCHED</span>}
           </div>
 
           {/* Call connection status from provider logs */}
-          <div className="flex items-center gap-2.5">
-            {steps.callInitiated ? (
-              <span className="text-emerald-400 font-bold">✓</span>
-            ) : (
-              <Loader2 className="w-3.5 h-3.5 text-red-500 animate-spin" />
-            )}
-            <span className={steps.callInitiated ? 'text-gray-300' : 'text-gray-500'}>Call Connected</span>
+          <div className="flex items-center justify-between text-slate-700">
+            <div className="flex items-center gap-2.5">
+              {steps.callInitiated ? (
+                <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span>
+              ) : (
+                <Loader2 className="w-3.5 h-3.5 text-red-500 animate-spin" />
+              )}
+              <span className={steps.callInitiated ? 'text-slate-900 font-bold' : 'text-slate-400'}>Priority Voice Connection</span>
+            </div>
+            {steps.callInitiated && <span className="text-emerald-600 text-[10px] font-bold tracking-wide bg-emerald-50 px-2 py-0.5 rounded-full">CONNECTED</span>}
           </div>
 
           {/* GPS streaming status */}
-          <div className="flex items-center gap-2.5">
-            {steps.liveTrackingActive ? (
-              <span className="text-emerald-400 font-bold">✓</span>
-            ) : (
-              <Loader2 className="w-3.5 h-3.5 text-red-500 animate-spin" />
-            )}
-            <span className={steps.liveTrackingActive ? 'text-gray-300' : 'text-gray-500'}>Live Tracking Active</span>
+          <div className="flex items-center justify-between text-slate-700">
+            <div className="flex items-center gap-2.5">
+              {steps.liveTrackingActive ? (
+                <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span>
+              ) : (
+                <Loader2 className="w-3.5 h-3.5 text-red-500 animate-spin" />
+              )}
+              <span className={steps.liveTrackingActive ? 'text-slate-900 font-bold' : 'text-slate-400'}>Live Telemetry Stream</span>
+            </div>
+            {steps.liveTrackingActive && <span className="text-emerald-600 text-[10px] font-bold tracking-wide bg-emerald-50 px-2 py-0.5 rounded-full">LIVE</span>}
           </div>
 
           {/* Evidence lock status */}
-          <div className="flex items-center gap-2.5">
-            {steps.evidenceLocked ? (
-              <span className="text-emerald-400 font-bold">✓</span>
-            ) : (
-              <Loader2 className="w-3.5 h-3.5 text-red-500 animate-spin" />
-            )}
-            <span className={steps.evidenceLocked ? 'text-gray-300' : 'text-gray-500'}>Evidence Locked</span>
+          <div className="flex items-center justify-between text-slate-700">
+            <div className="flex items-center gap-2.5">
+              {steps.evidenceLocked ? (
+                <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span>
+              ) : (
+                <Loader2 className="w-3.5 h-3.5 text-red-500 animate-spin" />
+              )}
+              <span className={steps.evidenceLocked ? 'text-slate-900 font-bold' : 'text-slate-400'}>Evidence Capsules Sealed</span>
+            </div>
+            {steps.evidenceLocked && <span className="text-emerald-600 text-[10px] font-bold tracking-wide bg-emerald-50 px-2 py-0.5 rounded-full">LOCKED</span>}
           </div>
 
           {/* Guardian acknowledgement check status */}
-          <div className="flex items-center gap-2.5">
-            {hasAcknowledged ? (
-              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-            ) : (
-              <Loader2 className="w-3.5 h-3.5 text-amber-500 animate-spin" />
-            )}
-            <span className={hasAcknowledged ? 'text-emerald-400 font-bold' : 'text-gray-500'}>
-              {hasAcknowledged ? 'Guardian Acknowledged' : 'Waiting for Guardian Acknowledgment'}
+          <div className="flex items-center justify-between text-slate-700">
+            <div className="flex items-center gap-2.5">
+              {hasAcknowledged ? (
+                <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-pulse"></span>
+              ) : (
+                <Loader2 className="w-3.5 h-3.5 text-amber-500 animate-spin" />
+              )}
+              <span className={hasAcknowledged ? 'text-emerald-600 font-bold' : 'text-slate-400'}>Guardian Acknowledgment</span>
+            </div>
+            <span className={`text-[10px] font-bold tracking-wide px-2 py-0.5 rounded-full ${hasAcknowledged ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}`}>
+              {hasAcknowledged ? 'RECEIVED' : 'WAITING'}
             </span>
           </div>
         </div>
 
         {steps.emergencyTimestamp && (
-          <div className="border-t border-gray-800 pt-2 mt-2 flex justify-between items-center text-[10px] text-gray-500 font-mono">
+          <div className="border-t border-slate-100 pt-2.5 mt-2.5 flex justify-between items-center text-[9px] text-slate-400 font-mono">
             <span>EMERGENCY TIMESTAMP:</span>
             <span>{steps.emergencyTimestamp}</span>
           </div>
@@ -293,44 +337,44 @@ export const SOSCenterPage: React.FC = () => {
       <div className="flex gap-2.5">
         <button
           onClick={() => setSirenPlaying(!sirenPlaying)}
-          className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition ${
-            sirenPlaying ? 'bg-red-500/10 border border-red-500/25 text-red-400' : 'bg-gray-800 text-gray-400'
+          className={`px-5 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 transition duration-200 shadow-sm border ${
+            sirenPlaying ? 'bg-red-50 border-red-200 text-red-600 hover:bg-red-100' : 'bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200'
           }`}
         >
           {sirenPlaying ? (
             <>
-              <Volume2 className="w-4 h-4 animate-pulse" />
-              Siren On
+              <Volume2 className="w-4 h-4 animate-bounce" />
+              Stop Siren Audio
             </>
           ) : (
             <>
               <VolumeX className="w-4 h-4" />
-              Siren Silenced
+              Play Siren Audio
             </>
           )}
         </button>
       </div>
 
       {/* Coordinates stream */}
-      <div className="p-4 bg-dark-950/80 border border-gray-800 rounded-xl max-w-sm w-full text-xs text-gray-400 leading-normal">
-        <div className="flex items-center justify-between font-bold text-gray-300 mb-2">
+      <div className="p-4 bg-slate-50 border border-slate-100 rounded-2xl max-w-md w-full text-xs text-slate-600 leading-normal shadow-sm">
+        <div className="flex items-center justify-between font-bold text-slate-800 mb-2">
           <span>Active Coordinate Stream:</span>
-          <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping"></span>
+          <span className="w-2 h-2 rounded-full bg-red-500 animate-ping"></span>
         </div>
-        <div className="space-y-1 text-left font-mono">
-          <p>Latitude: {activeJourney?.current_lat?.toFixed(5) || "12.9716"}</p>
-          <p>Longitude: {activeJourney?.current_lng?.toFixed(5) || "77.5946"}</p>
-          <p>Cab Number: {activeJourney?.cab_number || "EMERGENCY_SOS"}</p>
+        <div className="space-y-1 text-left font-mono text-[10px]">
+          <p><span className="text-slate-400">Latitude:</span> {activeJourney?.current_lat?.toFixed(5) || "12.9716"}</p>
+          <p><span className="text-slate-400">Longitude:</span> {activeJourney?.current_lng?.toFixed(5) || "77.5946"}</p>
+          <p><span className="text-slate-400">Cab Number:</span> {activeJourney?.cab_number || "EMERGENCY_SOS"}</p>
         </div>
       </div>
 
       {/* 100% Free Device Native Alert Center */}
-      <div className="glass-card p-6 max-w-sm w-full rounded-2xl border border-emerald-500/25 text-left space-y-4">
-        <div className="flex items-center gap-2 border-b border-gray-800 pb-3 mb-1">
-          <Smartphone className="w-5 h-5 text-emerald-400 animate-pulse" />
+      <div className="bg-white/80 border border-slate-100 p-6 max-w-md w-full rounded-2xl shadow-sm text-left space-y-4">
+        <div className="flex items-center gap-3 border-b border-slate-50 pb-3 mb-1">
+          <Smartphone className="w-5 h-5 text-emerald-500" />
           <div>
-            <h4 className="text-xs font-black text-white uppercase tracking-wider">Free Mobile Alert Center</h4>
-            <p className="text-[10px] text-emerald-400 font-medium">Zero-cost dispatches using native device apps</p>
+            <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider">Free Mobile Alert Center</h4>
+            <p className="text-[10px] text-emerald-600 font-semibold">Zero-cost dispatches using native device apps</p>
           </div>
         </div>
 
@@ -342,29 +386,29 @@ export const SOSCenterPage: React.FC = () => {
             const telUrl = `tel:${linkPhone}`;
 
             return (
-              <div key={`free-comms-${i}`} className="p-3 bg-dark-950/60 border border-gray-800/60 rounded-xl flex items-center justify-between gap-3">
+              <div key={`free-comms-${i}`} className="p-3 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-between gap-3 shadow-sm">
                 <div className="truncate">
-                  <p className="font-bold text-gray-200 text-xs truncate">{c.name}</p>
-                  <p className="text-[10px] text-gray-500 font-mono mt-0.5">{c.phone}</p>
+                  <p className="font-bold text-slate-800 text-xs truncate">{c.name}</p>
+                  <p className="text-[10px] text-slate-400 font-mono mt-0.5">{c.phone}</p>
                 </div>
                 
                 <div className="flex gap-2 shrink-0">
                   {/* Call Icon Button */}
                   <a
                     href={telUrl}
-                    className="p-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 rounded-lg text-emerald-400 transition"
+                    className="p-2 bg-emerald-50 border border-emerald-100 rounded-lg text-emerald-600 hover:bg-emerald-100 transition shadow-sm animate-pulse-slow"
                     title="Call Guardian"
                   >
-                    <Phone className="w-4 h-4" />
+                    <Phone className="w-3.5 h-3.5" />
                   </a>
 
                   {/* SMS Icon Button */}
                   <a
                     href={smsUrl}
-                    className="p-1.5 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 rounded-lg text-blue-400 transition"
+                    className="p-2 bg-blue-50 border border-blue-100 rounded-lg text-blue-600 hover:bg-blue-100 transition shadow-sm"
                     title="Prefilled Direct SMS"
                   >
-                    <MessageSquare className="w-4 h-4" />
+                    <MessageSquare className="w-3.5 h-3.5" />
                   </a>
 
                   {/* WhatsApp Icon Button */}
@@ -372,10 +416,10 @@ export const SOSCenterPage: React.FC = () => {
                     href={whatsappUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="p-1.5 bg-green-500/10 hover:bg-green-500/20 border border-green-500/20 rounded-lg text-green-400 transition"
+                    className="p-2 bg-green-50 border border-green-100 rounded-lg text-green-600 hover:bg-green-100 transition shadow-sm"
                     title="Prefilled WhatsApp alert"
                   >
-                    <MessageCircle className="w-4 h-4" />
+                    <MessageCircle className="w-3.5 h-3.5" />
                   </a>
                 </div>
               </div>
@@ -383,7 +427,7 @@ export const SOSCenterPage: React.FC = () => {
           })}
 
           {contacts.length === 0 && (
-            <p className="text-[11px] text-gray-500 text-center font-light">
+            <p className="text-[11px] text-slate-400 text-center font-light">
               Add trusted contacts in settings to use free native alert shortcuts.
             </p>
           )}
@@ -396,9 +440,9 @@ export const SOSCenterPage: React.FC = () => {
                 const whatsappUrl = `https://api.whatsapp.com/send?phone=${encodeURIComponent(linkPhone)}&text=${encodeURIComponent(emergencyMessage)}`;
                 window.open(whatsappUrl, '_blank');
               }}
-              className="w-full py-2.5 bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white font-bold rounded-xl text-[11px] flex items-center justify-center gap-2 shadow-lg shadow-green-950/20 transition duration-150 mt-1"
+              className="w-full py-2.5 bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white font-bold rounded-xl text-[11px] flex items-center justify-center gap-2 shadow-md transition duration-150 mt-1"
             >
-              <MessageCircle className="w-3.5 h-3.5" />
+              <MessageCircle className="w-3.5 h-3.5 text-white" />
               Send Free WhatsApp to Primary Contact
             </button>
           )}
@@ -407,7 +451,7 @@ export const SOSCenterPage: React.FC = () => {
 
       {/* Notified Guardians with production delivery statuses */}
       <div className="max-w-md w-full text-left space-y-3">
-        <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest text-center">Notified Guardians</h4>
+        <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest text-center">Notified Guardians</h4>
         
         {contacts.map((c, i) => {
           const alert = alertStatuses.find((a: any) => a.contact_phone === c.phone || a.contact_phone.includes(c.phone));
@@ -416,34 +460,34 @@ export const SOSCenterPage: React.FC = () => {
           const ack = alert?.acknowledged === 1;
 
           return (
-            <div key={i} className="p-4 bg-dark-950/50 border border-gray-800 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+            <div key={i} className="p-4 bg-white/80 border border-slate-100 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-sm">
               <div>
-                <p className="font-bold text-white flex items-center gap-1.5">
+                <p className="font-bold text-slate-800 flex items-center gap-1.5">
                   {c.name}
                 </p>
-                <p className="text-[10px] text-gray-500 font-mono mt-0.5">{c.phone}</p>
+                <p className="text-[10px] text-slate-400 font-mono mt-0.5">{c.phone}</p>
               </div>
               
               <div className="flex flex-wrap gap-1.5">
                 {/* SMS Status Badge */}
-                <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase ${
-                  smsStatus === 'delivered' ? 'bg-emerald-950 text-emerald-400' :
-                  smsStatus === 'failed' ? 'bg-red-950 text-red-400' : 'bg-amber-950 text-amber-400'
+                <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${
+                  smsStatus === 'delivered' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' :
+                  smsStatus === 'failed' ? 'bg-red-50 text-red-600 border border-red-100' : 'bg-amber-50 text-amber-600 border border-amber-100'
                 }`}>
                   {smsStatus === 'delivered' ? 'SMS Delivered' : smsStatus === 'failed' ? 'SMS Failed' : 'SMS Pending'}
                 </span>
 
                 {/* Call Status Badge */}
-                <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase ${
-                  callStatus === 'connected' ? 'bg-emerald-950 text-emerald-400' :
-                  callStatus === 'failed' ? 'bg-red-950 text-red-400' : 'bg-amber-950 text-amber-400'
+                <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${
+                  callStatus === 'connected' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' :
+                  callStatus === 'failed' ? 'bg-red-50 text-red-600 border border-red-100' : 'bg-amber-50 text-amber-600 border border-amber-100'
                 }`}>
                   {callStatus === 'connected' ? 'Call Connected' : callStatus === 'failed' ? 'Call Failed' : 'Call Pending'}
                 </span>
 
                 {/* Acknowledgment Badge */}
-                <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase ${
-                  ack ? 'bg-emerald-950 text-emerald-400' : 'bg-amber-950/20 text-gray-500'
+                <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${
+                  ack ? 'bg-emerald-50 text-emerald-600 border border-emerald-100 animate-pulse' : 'bg-slate-50 text-slate-400 border border-slate-100'
                 }`}>
                   {ack ? 'Guardian Acknowledged' : 'Awaiting Acknowledgment'}
                 </span>
@@ -453,7 +497,7 @@ export const SOSCenterPage: React.FC = () => {
         })}
 
         {contacts.length === 0 && (
-          <p className="text-xs text-gray-500 text-center font-light">
+          <p className="text-xs text-slate-400 text-center font-light">
             No contacts configured. Emergency dispatcher triggers fallback webhooks.
           </p>
         )}
@@ -462,10 +506,11 @@ export const SOSCenterPage: React.FC = () => {
       {/* Resolution button */}
       <button
         onClick={handleDeescalate}
-        className="px-8 py-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-2xl transition duration-150 shadow-lg text-sm"
+        className="px-8 py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-2xl transition duration-150 shadow-md text-xs tracking-wider uppercase"
       >
         De-escalate & Set Safe Status
       </button>
+    </div>>
 
     </div>
   );
