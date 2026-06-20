@@ -112,17 +112,20 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       <div className="bg-gray-900 text-gray-200 text-center py-1 text-sm font-mono">
         Frontend Status: Dashboard Mounted: YES • Sidebar Mounted: YES • API Connected: YES • Auth Loaded: YES
       </div>
-      <div className="relative min-h-screen bg-dark-950 flex flex-col md:flex-row text-gray-200">
+      <div className="relative min-h-screen bg-dark-950 flex flex-col md:flex-row text-[#0F172A] overflow-hidden">
+        {/* ambient luxury background glows */}
+        <div className="absolute top-[-10%] right-[-10%] w-[500px] h-[500px] bg-gradient-to-br from-brand-500/10 to-accent/5 rounded-full blur-[100px] pointer-events-none z-0"></div>
+        <div className="absolute bottom-[-10%] left-[20%] w-[600px] h-[600px] bg-gradient-to-tr from-brand-500/5 to-transparent rounded-full blur-[130px] pointer-events-none z-0"></div>
       
       {/* Sidebar Navigation - Desktop */}
-      <aside className="hidden md:flex flex-col w-64 bg-dark-900 border-r border-gray-800 p-4 shrink-0">
-        <div className="flex items-center gap-3 px-2 py-4 border-b border-gray-800 mb-6">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-brand-600 to-brand-400 flex items-center justify-center animate-pulse-slow">
-            <Shield className="w-5 h-5 text-white" />
+      <aside className="hidden md:flex flex-col w-64 bg-dark-900 border-r border-slate-200/60 p-5 shrink-0 shadow-[4px_0_24px_rgba(15,23,42,0.01)] z-10">
+        <div className="flex items-center gap-3 px-1 py-4 border-b border-slate-100 mb-6">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-brand-600 to-brand-400 flex items-center justify-center animate-pulse-slow shadow-sm">
+            <Shield className="w-4 h-4 text-white" />
           </div>
           <div>
-            <h1 className="font-extrabold text-lg text-gray-100 tracking-wide">FEMME</h1>
-            <p className="text-xs text-brand-400 font-semibold tracking-widest">SHE TRAVELS. WE GUARD.</p>
+            <h1 className="font-extrabold text-base text-gray-100 tracking-tight">FEMME</h1>
+            <p className="text-[9px] text-brand-600 font-bold tracking-widest uppercase">SHE TRAVELS. WE GUARD.</p>
           </div>
         </div>
 
@@ -134,13 +137,13 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
               <Link
                 key={item.path}
                 to={item.path}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 ${
                   isActive 
-                    ? 'bg-brand-500/10 text-brand-400 border border-brand-500/20' 
-                    : 'text-gray-400 hover:bg-gray-200/50 hover:text-gray-100'
+                    ? 'bg-brand-500/10 text-brand-600 border border-brand-500/10 shadow-[0_2px_10px_rgba(124,58,237,0.02)]' 
+                    : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
                 }`}
               >
-                <Icon className={`w-4 h-4 ${isActive ? 'text-brand-500' : ''}`} />
+                <Icon className={`w-4.5 h-4.5 ${isActive ? 'text-brand-500' : 'text-slate-400'}`} />
                 {item.name}
               </Link>
             );
@@ -174,7 +177,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           </div>
         )}
 
-        <div className="border-t border-gray-800 pt-4 mt-4">
+        <div className="border-t border-slate-100 pt-4 mt-4">
           <div className="flex items-center justify-between gap-3 px-2 mb-3">
             <div className="truncate">
               <p className="text-sm font-semibold text-gray-100 truncate">{user?.name}</p>
@@ -183,7 +186,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           </div>
           <button
             onClick={logout}
-            className="flex items-center gap-3 w-full px-3 py-2 rounded-lg text-sm text-gray-500 hover:bg-red-950/20 hover:text-red-400 transition-colors duration-200"
+            className="flex items-center gap-3 w-full px-3 py-2 rounded-lg text-sm text-slate-500 hover:bg-red-50 hover:text-red-600 transition-colors duration-200"
           >
             <LogOut className="w-4 h-4" />
             Sign Out
