@@ -372,11 +372,13 @@ async def sos_acknowledge(journey_id: str, phone: Optional[str] = None):
 
 # Include Feature Routers
 
+app.include_router(journeys.router, prefix=settings.API_V1_STR)
 app.include_router(contacts.router, prefix=settings.API_V1_STR)
 app.include_router(evidence.router, prefix=settings.API_V1_STR)
 app.include_router(reports.router, prefix=settings.API_V1_STR)
 app.include_router(geocode.router, prefix=settings.API_V1_STR)
 app.include_router(safety_route.router, prefix=settings.API_V1_STR)
+app.include_router(simulation.router, prefix=settings.API_V1_STR)
 
 
 # Real-time WebSocket Location Sharing Server

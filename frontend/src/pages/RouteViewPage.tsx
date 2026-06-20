@@ -404,6 +404,38 @@ export const RouteViewPage: React.FC = () => {
             </button>
           </div>
         )}
+
+        {journeyToUse && !isPublicTrack && (
+          <div className="absolute bottom-4 left-4 right-4 bg-white/95 backdrop-blur-md border border-slate-100 p-4 rounded-xl z-[1000] flex flex-col sm:flex-row justify-between items-center gap-3 shadow-lg">
+            <div className="flex items-center gap-3">
+              <span className="relative flex h-3 w-3">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+              </span>
+              <div>
+                <p className="text-xs font-bold text-slate-800">Shield Active: Monitoring Journey</p>
+                <p className="text-[10px] text-slate-500">Cab: {journeyToUse.cab_number} • Destination: {journeyToUse.dest_address}</p>
+              </div>
+            </div>
+            <button
+              onClick={async () => {
+                if (window.confirm("Have you reached successfully? This will stop shield monitoring.")) {
+                  try {
+                    await api.completeJourney();
+                    useStore.getState().setActiveJourney(null);
+                    useStore.getState().resetTelemetryState();
+                    navigate('/dashboard');
+                  } catch (err) {
+                    console.error("Failed to complete journey:", err);
+                  }
+                }
+              }}
+              className="w-full sm:w-auto px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg text-xs transition duration-150 shadow-sm"
+            >
+              Stop Shield (Reached Safely)
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

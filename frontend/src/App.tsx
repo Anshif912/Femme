@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { useStore } from './store/useStore';
 import { Layout } from './components/Layout';
-import { api } from './utils/api';
+import api from './utils/api'; // corrected default import
 import { LocationProvider } from './context/LocationContext';
 import { AlertTriangle } from 'lucide-react';
 
@@ -12,7 +12,7 @@ import { AuthPage } from './pages/AuthPage';
 import DashboardPage from './pages/DashboardPage';
 import { JourneySetupPage } from './pages/JourneySetupPage';
 import { ActiveJourneyPage } from './pages/ActiveJourneyPage';
-import { RouteViewPage } from './pages/RouteViewPage';
+import RouteViewPage from './pages/RouteViewPage';
 import { AnomalyCenterPage } from './pages/AnomalyCenterPage';
 import { SOSCenterPage } from './pages/SOSCenterPage';
 import { TrustedContactsPage } from './pages/TrustedContactsPage';
@@ -42,6 +42,16 @@ const PublicOnlyRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
 export const App: React.FC = () => {
   const [isBackendReachable, setIsBackendReachable] = useState<boolean | null>(null);
 
+  // Global runtime error logger
+  useEffect(() => {
+    const handleError = (event: any) => {
+      console.error('Runtime error:', event.error);
+    };
+    window.addEventListener('error', handleError);
+    return () => window.removeEventListener('error', handleError);
+  }, []);
+
+  // Health check effect
   useEffect(() => {
     let isMounted = true;
     const checkReachability = async () => {
@@ -67,13 +77,12 @@ export const App: React.FC = () => {
 
   return (
     <LocationProvider>
-      <Router>
-        {isBackendReachable === false && (
-          <div className="bg-red-600 text-white text-center py-2 px-4 flex items-center justify-center gap-2 font-bold text-sm z-50 relative">
-            <AlertTriangle className="w-4 h-4" />
-            <span>Backend unreachable</span>
-          </div>
-        )}
+      {isBackendReachable === false && (
+        <div className="bg-red-600 text-white text-center py-2 px-4 flex items-center justify-center gap-2 font-bold text-sm z-50 relative">
+          <AlertTriangle className="w-4 h-4" />
+          <span>Backend unreachable</span>
+        </div>
+      )}
       <Routes>
         {/* Public Landing */}
         <Route path="/" element={<LandingPage />} />
@@ -241,7 +250,6 @@ export const App: React.FC = () => {
         {/* Catch-all fallback redirect */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
-        </Router>
     </LocationProvider>
   );
 };

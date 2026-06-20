@@ -82,7 +82,7 @@ export const AuthPage: React.FC = () => {
           <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-brand-600 to-brand-400 flex items-center justify-center shadow-lg shadow-brand-500/20 mb-4">
             <Shield className="w-6 h-6 text-white" />
           </div>
-          <h2 className="text-2xl font-black text-white tracking-wide">Secure Sign In</h2>
+          <h2 className="text-2xl font-black text-gray-100 tracking-wide">Secure Sign In</h2>
           <p className="text-xs text-gray-400 mt-1">FEMME AI Passive Travel Shield</p>
           <AIHero />
         </div>
@@ -117,7 +117,7 @@ export const AuthPage: React.FC = () => {
                   placeholder="+919999999999"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  className="w-full bg-dark-950 border border-gray-800 focus:border-brand-500/40 rounded-xl py-3 pl-11 pr-4 text-white text-sm outline-none transition duration-200"
+                  className="w-full bg-dark-950 border border-gray-800 focus:border-brand-500/40 rounded-xl py-3 pl-11 pr-4 text-gray-100 text-sm outline-none transition duration-200"
                   required
                 />
               </div>
@@ -129,7 +129,7 @@ export const AuthPage: React.FC = () => {
             <button
               type="submit"
               disabled={loading || !phone}
-              className="w-full py-3.5 bg-brand-600 hover:bg-brand-700 disabled:bg-gray-800 disabled:text-gray-500 text-white font-bold rounded-xl transition duration-200 shadow-lg flex items-center justify-center gap-2"
+              className="w-full py-3.5 bg-brand-600 hover:bg-brand-700 disabled:bg-gray-200 disabled:text-gray-400 text-white font-bold rounded-xl transition duration-200 shadow-md flex items-center justify-center gap-2"
             >
               {loading ? 'Sending Code...' : 'Request OTP Code'}
               <ArrowRight className="w-4 h-4" />
@@ -149,7 +149,7 @@ export const AuthPage: React.FC = () => {
                 placeholder="Your name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full bg-dark-950 border border-gray-800 focus:border-brand-500/40 rounded-xl py-3 px-4 text-white text-sm outline-none transition duration-200"
+                className="w-full bg-dark-950 border border-gray-800 focus:border-brand-500/40 rounded-xl py-3 px-4 text-gray-100 text-sm outline-none transition duration-200"
               />
             </div>
 
@@ -163,7 +163,7 @@ export const AuthPage: React.FC = () => {
                   placeholder="Enter 6-digit OTP"
                   value={otp}
                   onChange={(e) => setOtp(e.target.value)}
-                  className="w-full bg-dark-950 border border-gray-800 focus:border-brand-500/40 rounded-xl py-3 pl-11 pr-4 text-white text-sm outline-none tracking-widest text-center font-mono transition duration-200"
+                  className="w-full bg-dark-950 border border-gray-800 focus:border-brand-500/40 rounded-xl py-3 pl-11 pr-4 text-gray-100 text-sm outline-none tracking-widest text-center font-mono transition duration-200"
                   required
                 />
               </div>
@@ -172,7 +172,7 @@ export const AuthPage: React.FC = () => {
             <button
               type="submit"
               disabled={loading || !otp}
-              className="w-full py-3.5 bg-brand-600 hover:bg-brand-700 disabled:bg-gray-800 disabled:text-gray-500 text-white font-bold rounded-xl transition duration-200 shadow-lg flex items-center justify-center gap-2"
+              className="w-full py-3.5 bg-brand-600 hover:bg-brand-700 disabled:bg-gray-200 disabled:text-gray-400 text-white font-bold rounded-xl transition duration-200 shadow-md flex items-center justify-center gap-2"
             >
               {loading ? 'Verifying OTP...' : 'Verify & Sign In'}
               <ArrowRight className="w-4 h-4" />
@@ -181,7 +181,7 @@ export const AuthPage: React.FC = () => {
             <button
               type="button"
               onClick={() => setStep('phone')}
-              className="w-full text-center text-xs text-gray-400 hover:text-white transition-colors duration-150 py-1"
+              className="w-full text-center text-xs text-gray-400 hover:text-gray-100 transition-colors duration-150 py-1"
             >
               Back to Phone Number Entry
             </button>

@@ -24,6 +24,7 @@ interface AuthContextProps {
 const AuthContext = createContext<AuthContextProps | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
+  console.log('AuthProvider mounted');
   const navigate = useNavigate();
   const [user, setUser] = useState<UserProfile | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -94,7 +95,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const logout = () => {
     clearAllClientState();
-    navigate('/login');
+    navigate('/auth');
   };
 
 
@@ -124,7 +125,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     } else {
       // no token – ensure we are on a public page
-      logout();
+      clearAllClientState();
+      const hash = window.location.hash;
+      if (hash && hash !== '#/' && hash !== '#/auth') {
+        navigate('/auth');
+      }
     }
 
     // Set up inactivity listeners

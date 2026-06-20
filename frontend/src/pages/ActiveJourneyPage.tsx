@@ -191,6 +191,19 @@ export const ActiveJourneyPage: React.FC = () => {
     }
   };
 
+  const handleComplete = async () => {
+    if (confirm("Have you reached successfully? This will stop shield monitoring.")) {
+      try {
+        await api.completeJourney();
+        setActiveJourney(null);
+        resetTelemetryState();
+        navigate('/dashboard');
+      } catch (err) {
+        console.error(err);
+      }
+    }
+  };
+
   const handleSOS = async () => {
     setEmergencyState(true);
     try {
@@ -355,6 +368,15 @@ export const ActiveJourneyPage: React.FC = () => {
             className="w-full py-4 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl transition duration-150 shadow-lg"
           >
             Trigger Instant SOS Emergency
+          </button>
+
+          {/* Reached Safely / Stop Shield Action */}
+          <button
+            onClick={handleComplete}
+            className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition duration-150 shadow-md flex items-center justify-center gap-2"
+          >
+            <CheckCircle2 className="w-4 h-4" />
+            Stop Shield (Reached Safely)
           </button>
 
           {/* Monitor Cleanup Action */}

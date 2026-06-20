@@ -38,6 +38,12 @@ async function request(path: string, options: RequestInit = {}) {
     });
 
     if (!response.ok) {
+      // Global 401 handling
+      if (response.status === 401) {
+        localStorage.removeItem('access_token');
+        useStore.getState().logout();
+        throw new Error('Unauthorized - session expired');
+      }
       let errorDetail = 'API Request Failed';
       try {
         const errorJson = await response.json();

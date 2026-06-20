@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
 import api from '../utils/api';
-import VideoBackground from './VideoBackground';
+
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   Shield,
@@ -26,6 +26,8 @@ interface LayoutProps {
 }
 
 export const Layout: React.FC<LayoutProps> = ({ children }) => {
+  console.log('Layout mounted');
+
   const location = useLocation();
   const navigate = useNavigate();
   const timerRef = useRef<any | null>(null);
@@ -105,7 +107,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   return (
     <>
-      <VideoBackground />
+      
       {/* Frontend Status Banner */}
       <div className="bg-gray-900 text-gray-200 text-center py-1 text-sm font-mono">
         Frontend Status: Dashboard Mounted: YES • Sidebar Mounted: YES • API Connected: YES • Auth Loaded: YES
@@ -119,7 +121,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
             <Shield className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h1 className="font-extrabold text-lg text-white tracking-wide">FEMME</h1>
+            <h1 className="font-extrabold text-lg text-gray-100 tracking-wide">FEMME</h1>
             <p className="text-xs text-brand-400 font-semibold tracking-widest">SHE TRAVELS. WE GUARD.</p>
           </div>
         </div>
@@ -135,7 +137,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
                   isActive 
                     ? 'bg-brand-500/10 text-brand-400 border border-brand-500/20' 
-                    : 'text-gray-400 hover:bg-gray-800/40 hover:text-white'
+                    : 'text-gray-400 hover:bg-gray-200/50 hover:text-gray-100'
                 }`}
               >
                 <Icon className={`w-4 h-4 ${isActive ? 'text-brand-500' : ''}`} />
@@ -146,19 +148,36 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         </nav>
 
         {activeJourney && (
-          <div className="mt-4 p-3 bg-brand-500/5 border border-brand-500/10 rounded-lg animate-pulse">
-            <div className="flex items-center gap-2 text-xs text-brand-400 font-bold mb-1">
-              <span className="w-2 h-2 rounded-full bg-brand-500 inline-block animate-ping"></span>
+          <div className="mt-4 p-3 bg-emerald-50 border border-emerald-200 rounded-xl space-y-2">
+            <div className="flex items-center gap-2 text-xs text-emerald-700 font-bold">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-ping"></span>
               SHIELD ACTIVE
             </div>
-            <p className="text-xs text-gray-400 truncate">Cab: {activeJourney.cab_number}</p>
+            <p className="text-xs text-emerald-900 font-medium truncate mb-1">Cab: {activeJourney.cab_number}</p>
+            <button
+              onClick={async () => {
+                if (window.confirm("Have you reached successfully? This will stop shield monitoring.")) {
+                  try {
+                    await api.completeJourney();
+                    useStore.getState().setActiveJourney(null);
+                    useStore.getState().resetTelemetryState();
+                    navigate('/dashboard');
+                  } catch (err) {
+                    console.error("Failed to stop shield:", err);
+                  }
+                }
+              }}
+              className="w-full py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[10px] font-bold transition shadow-sm"
+            >
+              Stop Shield
+            </button>
           </div>
         )}
 
         <div className="border-t border-gray-800 pt-4 mt-4">
           <div className="flex items-center justify-between gap-3 px-2 mb-3">
             <div className="truncate">
-              <p className="text-sm font-semibold text-white truncate">{user?.name}</p>
+              <p className="text-sm font-semibold text-gray-100 truncate">{user?.name}</p>
               <p className="text-xs text-gray-500 truncate">{user?.phone}</p>
             </div>
           </div>
@@ -181,7 +200,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
             <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-brand-600 to-brand-400 flex items-center justify-center">
               <Shield className="w-4 h-4 text-white" />
             </div>
-            <span className="font-extrabold text-white tracking-wide">FEMME</span>
+            <span className="font-extrabold text-gray-100 tracking-wide">FEMME</span>
           </div>
           {activeJourney && (
             <Link to="/route-view" className="text-xs px-2.5 py-1 bg-brand-600 text-white rounded-full font-bold flex items-center gap-1.5 animate-pulse">
@@ -238,7 +257,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
               <AlertTriangle className="w-8 h-8 text-red-500 animate-bounce" />
             </div>
 
-            <h3 className="text-xl font-bold text-white mb-2">Are You Okay?</h3>
+            <h3 className="text-xl font-bold text-gray-100 mb-2">Are You Okay?</h3>
             <p className="text-sm text-gray-300 mb-6">
               We detected {routeDeviation && "a Route Deviation"}
               {motionAnomaly && (routeDeviation ? " & " : "") + "an Unusual Stop"}

@@ -43,8 +43,7 @@ export const LandingPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-dark-950 text-gray-100 flex flex-col font-sans select-none overflow-x-hidden">
       
-      {/* Background radial effects */}
-      <div className="absolute top-0 left-0 w-full h-[600px] bg-[radial-gradient(ellipse_at_top,rgba(244,63,94,0.12),transparent_50%)] pointer-events-none z-0" />
+      {/* Background radial effects removed */}
       
       {/* Header bar */}
       <header className="w-full max-w-7xl mx-auto px-6 py-6 flex justify-between items-center z-10 relative">
@@ -53,14 +52,14 @@ export const LandingPage: React.FC = () => {
             <Shield className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h1 className="font-extrabold text-xl text-white tracking-wide">FEMME</h1>
+            <h1 className="font-extrabold text-xl text-gray-100 tracking-wide">FEMME</h1>
             <p className="text-[9px] text-brand-400 font-bold tracking-widest leading-none">SHE TRAVELS. WE GUARD.</p>
           </div>
         </div>
 
         <button 
           onClick={() => navigate(isAuthenticated ? '/dashboard' : '/auth')}
-          className="px-5 py-2.5 bg-dark-900 border border-gray-800 text-sm font-semibold text-gray-200 hover:text-white rounded-xl hover:bg-dark-800/80 transition duration-200 shadow-md"
+          className="px-5 py-2.5 bg-white border border-gray-800 text-sm font-semibold text-gray-100 hover:text-brand-600 rounded-xl hover:bg-gray-50 transition duration-200 shadow-sm"
         >
           {isAuthenticated ? 'Go to Dashboard' : 'Sign In'}
         </button>
@@ -74,7 +73,7 @@ export const LandingPage: React.FC = () => {
           AI Invisible Travel Guardian
         </div>
 
-        <h2 className="text-4xl md:text-6xl font-black text-white leading-tight mb-6 max-w-4xl">
+        <h2 className="text-4xl md:text-6xl font-black text-gray-100 leading-tight mb-6 max-w-4xl">
           She Travels. <br className="md:hidden" />
           <span className="bg-clip-text text-transparent bg-gradient-to-r from-brand-400 via-rose-500 to-brand-600">We Guard.</span>
         </h2>
@@ -86,13 +85,13 @@ export const LandingPage: React.FC = () => {
         <div className="flex flex-col sm:flex-row gap-4 mb-20 w-full max-w-md">
           <button
             onClick={() => navigate(isAuthenticated ? '/dashboard' : '/auth')}
-            className="flex-1 py-3.5 bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-xl transition duration-200 shadow-lg shadow-brand-500/20 hover:scale-[1.02]"
+            className="flex-1 py-3.5 bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-xl transition duration-200 shadow-md hover:scale-[1.01]"
           >
             Get Protected Now
           </button>
           <a
             href="#how-it-works"
-            className="flex-1 py-3.5 bg-dark-900/60 hover:bg-dark-800 border border-gray-800 text-gray-300 font-semibold rounded-xl transition duration-200 flex items-center justify-center"
+            className="flex-1 py-3.5 bg-white hover:bg-gray-50 border border-gray-800 text-gray-100 font-semibold rounded-xl transition duration-200 flex items-center justify-center shadow-sm"
           >
             Learn More
           </a>
@@ -110,7 +109,7 @@ export const LandingPage: React.FC = () => {
                 <div className="w-12 h-12 rounded-xl bg-gray-900 border border-gray-800 flex items-center justify-center mb-5 group-hover:bg-brand-500/10 group-hover:border-brand-500/20 transition-all duration-300">
                   <Icon className="w-5 h-5 text-brand-400 group-hover:text-brand-500 transition-colors" />
                 </div>
-                <h4 className="text-lg font-bold text-white mb-2">{f.title}</h4>
+                <h4 className="text-lg font-bold text-gray-100 mb-2">{f.title}</h4>
                 <p className="text-sm text-gray-400 leading-relaxed font-light">{f.desc}</p>
               </div>
             );
